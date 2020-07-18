@@ -49,7 +49,7 @@ def gen_wave_plot(input_file, output_file, height, width):
     plt.plot(x[:, 1])
 
     # plt.show()
-    plt.savefig('output_file')
+    plt.savefig(output_file)
 
 
 def main(args):
