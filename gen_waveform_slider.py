@@ -28,8 +28,6 @@ def generate_waveform_video(background_image, total_seconds, output_file, fps):
     image = cv2.imread(background_image)
     height, width, _ = image.shape
 
-    video = VideoWriter(output_file, fourcc, float(fps), (width, height))
-
     frames = int(total_seconds * fps)
     color = (40, 40, 255)
     thickness = 2
@@ -56,14 +54,14 @@ def main(args):
     background_image = args['<background_image>']
     output_file = args['--output']
     try:
-        total_seconds = int(args['<total_seconds>'])
+        total_seconds = float(args['<total_seconds>'])
         fps = int(args['--fps'])
     except ValueError as e:
         print('Error: %s\n' % str(e))
         print(__doc__)
         return 2
 
-    generate_waveform_video(background_image, total_seconds, output_file, fps, width, height)
+    generate_waveform_video(background_image, total_seconds, output_file, fps)
 
     return 0
 
