@@ -10,3 +10,6 @@ Tool to generate a waveform image of a media files audio.
 Tool to generate a video file based on a supplied background image with progress line based on total time.
 Intended to provide positional progress indication across a background image (like a waveform plot).
 
+## video_geometry.py
+Tool to get the geometry parameters of a video file. Probably redundant.
+
