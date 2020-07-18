@@ -51,13 +51,13 @@ def generate_waveform_video(background_image, total_seconds, output_file, fps):
     video.release()
 
 
-def main(argv):
-    # print(repr(argv))
-    background_image = argv['<background_image>']
-    output_file = argv['--output']
+def main(args):
+    # print(repr(args))
+    background_image = args['<background_image>']
+    output_file = args['--output']
     try:
-        total_seconds = int(argv['<total_seconds>'])
-        fps = int(argv['--fps'])
+        total_seconds = int(args['<total_seconds>'])
+        fps = int(args['--fps'])
     except ValueError as e:
         print('Error: %s\n' % str(e))
         print(__doc__)

@@ -54,11 +54,11 @@ def gen_wave_plot(input_file, output_file, height, width):
 
 def main(args):
     # print(repr(args))
-    input_file = argv['<input_media_file>']
-    output_file = argv['--output']
+    input_file = args['<input_media_file>']
+    output_file = args['--output']
     try:
-        height = int(argv['--height'])
-        width = int(argv['--width'])
+        height = int(args['--height'])
+        width = int(args['--width'])
     except ValueError as e:
         print('Error: %s\n' % str(e))
         print(__doc__)
