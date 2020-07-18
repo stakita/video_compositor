@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''gen_wave_plot.py
 Generate waveform plot of audio channels in input file (video/audio).
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''gen_waveform_slider.py
 Generate waveform progress slider overlay.
 
