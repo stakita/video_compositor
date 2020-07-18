@@ -2,10 +2,11 @@
 '''concat_mp4
 
 Usage:
-  concat_mp4 [--output=FILE] [<files>...]
+  concat_mp4 [--clobber] --output=FILE [<files>...]
 
 Options:
   -o FILE --output=FILE
+  -c --clobber
 '''
 
 import sys
@@ -33,11 +34,15 @@ def main(args):
     logging.debug(args)
     input_files = args['<files>']
     output_file = args['--output']
+    clobber = args['--clobber']
 
     if output_file[-4:].lower() != '.mp4':
         output_file += '.mp4'
 
-    if os.path.exists(output_file):
+    if output_file[-4:].lower() != '.mp4':
+        output_file += '.mp4'
+
+    if not clobber and os.path.exists(output_file):
         sys.stderr.write('Error: Output file %s exists. Exiting.\n' % output_file)
         return 1
 
@@ -52,10 +57,11 @@ def main(args):
                 temp.write('file \'%s\'\n' % os.path.abspath(filename))
 
         logging.debug('tmp_fpath: %s' % tmp_fpath)
-        sh.ffmpeg('-safe', '0', '-f', 'concat', '-i', tmp_fpath, '-c', 'copy', output_file)
+        sh.ffmpeg('-y', '-safe', '0', '-f', 'concat', '-i', tmp_fpath, '-c', 'copy', output_file)
 
     finally:
-        os.remove(tmp_fpath)
+        # os.remove(tmp_fpath)
+        pass
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
