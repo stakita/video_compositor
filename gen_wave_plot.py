@@ -3,7 +3,7 @@
 Generate waveform plot of audio channels in input file (video/audio).
 
 Usage:
-  gen_wave_plot.py <input_media_file> [--output=<OUTPUT_FILE>] [--width=<WIDTH>] [--height=<HEIGHT>]
+  gen_wave_plot.py <input_media_file> [--output=<OUTPUT_FILE>] [--width=<WIDTH>] [--height=<HEIGHT>] [--channels=<CHANNELS>]
   gen_wave_plot.py (-h | --help)
 
 Options:
@@ -11,6 +11,7 @@ Options:
   --output=<OUTPUT_FILE>    Output file name [default: waveplot.png]
   --width=<WIDTH>           Width of the image [default: 2262]
   --height=<HEIGHT>         Width of the image [default: 200]
+  --channels=<CHANNELS>     Set mono(1) or stereo(2) [default: 2]
 '''
 import sys
 try:
@@ -22,7 +23,7 @@ except ImportError as e:
 from sksound.sounds import Sound
 import matplotlib.pyplot as plt
 
-def gen_wave_plot(input_file, output_file, height, width):
+def gen_wave_plot(input_file, output_file, height, width, channels):
     mysound = Sound(input_file)
 
     # print(repr(mysound.data.view()))
@@ -36,17 +37,23 @@ def gen_wave_plot(input_file, output_file, height, width):
     dpi = 20
     fig = plt.figure(dpi=dpi, figsize=(width / dpi, height / dpi))
 
-    plt.subplot(2, 1, 1)
-    plt.axis([ 0, len(x[:,0]), int(-((2**16 / 2) - 1)), int(2**16 / 2)])
-    plt.axis('off')
-    plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
-    plt.plot(x[:, 0])
+    if channels == 2:
+        plt.subplot(2, 1, 1)
+        plt.axis([ 0, len(x[:,0]), int(-((2**16 / 2) - 1)), int(2**16 / 2)])
+        plt.axis('off')
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        plt.plot(x[:, 0])
 
-    plt.subplot(2, 1, 2)
-    plt.axis([ 0, len(x[:,0]), int(-((2**16 / 2) - 1)), int(2**16 / 2)])
-    plt.axis('off')
-    plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
-    plt.plot(x[:, 1])
+        plt.subplot(2, 1, 2)
+        plt.axis([ 0, len(x[:,0]), int(-((2**16 / 2) - 1)), int(2**16 / 2)])
+        plt.axis('off')
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        plt.plot(x[:, 1])
+    else:
+        plt.axis([ 0, len(x[:,0]), int(-((2**16 / 2) - 1)), int(2**16 / 2)])
+        plt.axis('off')
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        plt.plot(x[:, 0])
 
     # plt.show()
     plt.savefig(output_file)
@@ -59,12 +66,13 @@ def main(args):
     try:
         height = int(args['--height'])
         width = int(args['--width'])
+        channels = int(args['--channels'])
     except ValueError as e:
         print('Error: %s\n' % str(e))
         print(__doc__)
         return 2
 
-    gen_wave_plot(input_file, output_file, height, width)
+    gen_wave_plot(input_file, output_file, height, width, channels)
 
     return 0
 
