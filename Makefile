@@ -6,9 +6,11 @@ BUILD_PARAMS = build_params.txt
 HERO_RAW_FILES := $(wildcard hero5/*.MP4)
 HERO_JOIN_CONFIG = hero_join_config.txt
 HERO_JOIN_FILE = hero.join.mp4
+HERO_AUDIO_FILE = hero.join.aac
 HERO_WAVEFORM_PLOT = hero.wavform.plot.png
 HERO_WAVEFORM_FILE = hero.wavform.avi
 HERO_PLUS_WAVEFORM = hero_plus_waveform.mp4
+HERO_RENDER = hero_render.mp4
 HERO_OUTPUT_BITRATE = 30000k
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
@@ -44,23 +46,29 @@ UNDERLINE=\033[4m
 # echo -e "This text is ${RED}red${NONE} and ${GREEN}green${NONE} and ${BOLD}bold${NONE} and ${UNDERLINE}underlined${NONE}."
 
 
-all: $(BUILD_PARAMS) $(HERO_PLUS_WAVEFORM) # merged_full.mp4
+all: $(BUILD_PARAMS) $(HERO_RENDER) # merged_full.mp4
 
 .PHONY: build_params all clean clobber distclean
 
-$(BUILD_PARAMS): Makefile
+$(BUILD_PARAMS): $(BUILD_CONFIG) Makefile
 	@echo recording build parameters
-	build_params.py $< > $@
+	build_params.py Makefile > $@
 
 
 clean:
-	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM)
+	@echo "${BOLD}clean derivative files - leave join files${NONE}"
+	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_RENDER)
 
 clobber: clean
+	@echo "${BOLD}clobber - kill them all${NONE}"
+	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
 	rm -f $(BUILD_CONFIG) $(BUILD_PARAMS)
 
 distclean:
-	rm -f merged.wav waveform.avi waveplot.png audio_mix.aac
+	@echo "${BOLD}distclean - leave final file and config${NONE}"
+	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM)
+	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
+	#rm -f merged.wav waveform.avi waveplot.png audio_mix.aac
 
 
 DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX = '00:00:00.000'\nADVANCE_HERO = '00:00:00.000'\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\n"
@@ -82,11 +90,28 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
 
+# https://trac.ffmpeg.org/wiki/AudioChannelManipulation
+filter_audio = " \
+[0:a] volume=$(VOLUME_HERO) [left]; \
+[1:a] volume=$(VOLUME_HERO) [right]; \
+[left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
+"
+
+# mix audio tracks
+$(HERO_AUDIO_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
+	@echo "${BOLD}mix hero audio tracks${NONE}"
+	$(FFMEG_BIN) \
+		-y \
+		-ss $(shell $(READ_ADVANCE_HERO)) \
+		-i $(HERO_JOIN_FILE) \
+		-filter:a "volume=$(shell $(READ_VOLUME_HERO))" \
+		$@
+
 # generate waveform plot
-$(HERO_WAVEFORM_PLOT): $(HERO_JOIN_FILE)
+$(HERO_WAVEFORM_PLOT): $(HERO_JOIN_FILE) $(HERO_AUDIO_FILE)
 	@echo "${BOLD}generate hero waveform plot${NONE}"
 	HERO_JOIN_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
-	gen_wave_plot.py --height=100 --channels=1 --width=$$HERO_JOIN_WIDTH $< --output=$@
+	gen_wave_plot.py --height=100 --channels=1 --width=$$HERO_JOIN_WIDTH $(HERO_AUDIO_FILE) --output=$@
 
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_PLOT)
@@ -121,7 +146,18 @@ $(HERO_PLUS_WAVEFORM): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 		$(shell $(READ_TIME_OPTIONS)) \
 		$@
 
-
+# mix hereo audio and video
+$(HERO_RENDER): $(HERO_PLUS_WAVEFORM) $(HERO_AUDIO_FILE) $(BUILD_CONFIG)
+	@echo "${BOLD}mix hero render audio and video${NONE}"
+	$(FFMEG_BIN) \
+		-y \
+		-i $(HERO_PLUS_WAVEFORM) \
+		-i $(HERO_AUDIO_FILE) \
+		-c copy \
+		-acodec copy \
+		-b:v $(HERO_OUTPUT_BITRATE) \
+		$(shell $(READ_TIME_OPTIONS)) \
+		$(HERO_RENDER)
 
 
 # generate ffmpeg join config for max files
