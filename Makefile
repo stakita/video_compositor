@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 BUILD_CONFIG = config.py
+BUILD_PARAMS = build_params.txt
 
 HERO_RAW_FILES := $(wildcard hero5/*.MP4)
 HERO_JOIN_CONFIG = hero_join_config.txt
@@ -29,7 +30,14 @@ READ_ADVANCE_HERO = python -c "import config; print(config.ADVANCE_HERO)"
 READ_VOLUME_HERO = python -c "import config; print(config.VOLUME_HERO)"
 READ_VOLUME_MAX = python -c "import config; print(config.VOLUME_MAX)"
 
-all: $(HERO_PLUS_WAVEFORM) # merged_full.mp4
+.PHONY: build_params
+
+$(BUILD_PARAMS): Makefile
+	@echo recording build parameters
+	build_params.py $< > $@
+
+
+all: $(BUILD_PARAMS) $(HERO_PLUS_WAVEFORM) # merged_full.mp4
 
 clean:
 	rm -f merged.mp4 merge_sbs.mp4 audio_mix.aac merge_sbs_tbb.mp4 merged_full.mp4 waveform.avi waveplot.png
