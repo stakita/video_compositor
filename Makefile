@@ -9,6 +9,7 @@ HERO_JOIN_FILE = hero.join.mp4
 HERO_WAVEFORM_PLOT = hero.wavform.plot.png
 HERO_WAVEFORM_FILE = hero.wavform.avi
 HERO_PLUS_WAVEFORM = hero_plus_waveform.mp4
+HERO_OUTPUT_BITRATE = 30000k
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
 MAX_JOIN_CONFIG = max_join_config.txt
@@ -102,7 +103,7 @@ $(HERO_PLUS_WAVEFORM): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT [out] \
 			" \
 		-map "[out]" \
-		-b:v 50000k \
+		-b:v $(HERO_OUTPUT_BITRATE) \
 		$(shell $(READ_TIME_OPTIONS)) \
 		$@
 
