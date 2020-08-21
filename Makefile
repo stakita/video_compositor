@@ -2,9 +2,11 @@
 
 HERO_RAW_FILES := hero5/*.LRV
 MAX_RAW_FILES := max/*.LRV
-TIME_OPTIONS = #-t 00:01:00.000
-ADVANCE_MAX = 00:00:00.000
-ADVANCE_HERO = 00:00:02.029
+TIME_OPTIONS = #-t 00:02:00.000
+# If apad is enabled in the audio filter (different length video), you need to set a bounding time to complete:
+# TIME_OPTIONS = -t 3433.592000
+ADVANCE_MAX = 00:00:01.244
+ADVANCE_HERO = 00:00:00.000
 VOLUME_HERO = 18.0
 VOLUME_MAX = 0.15
 FFMEG_BIN = ~/bin/ffmpeg
@@ -119,4 +121,62 @@ merged.mp4: merge_sbs.mp4 audio_mix.aac
 		-b:v 2500k \
 		$(TIME_OPTIONS) \
 		merged.mp4
+
+waveplot.png: merged.mp4
+	@echo generate waveplot background
+	gen_wave_plot.py merged.mp4 --output=waveplot.png
+
+waveform.avi: merged.mp4 waveplot.png
+	@echo generate waveform progress video
+	$(eval DURATION_SECONDS := $(shell ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 merged.mp4))
+	gen_waveform_slider.py waveplot.png $(DURATION_SECONDS) --output=waveform.avi
+
+
+# combine video into single top-by-bottom
+merge_sbs_tbb.mp4: merged.mp4 waveform.avi
+	@echo combine video into single top-by-bottom
+
+# 	$(eval top_height := 704)
+# 	$(eval bottom_height := 200)
+	$(eval top_height := `video_geometry.py --height merged.mp4`)
+	$(eval top_width := `video_geometry.py --width merged.mp4`)
+	$(eval bottom_height := `video_geometry.py --height waveform.avi`)
+
+# 	$(eval output_width := 2262)
+# 	$(eval output_height := 904)
+	$(eval output_width := $(top_width))
+	$(eval output_height := $(shell python -c "print($(top_height) + $(bottom_height))"))
+
+	$(eval GEOMETRY := $(output_width)x$(output_height))
+
+	$(FFMEG_BIN) \
+		-i merged.mp4 \
+		-i waveform.avi \
+		-filter_complex " \
+			nullsrc=size=$(GEOMETRY) [base]; \
+			[0:v] setpts=PTS-STARTPTS [top]; \
+			[1:v] setpts=PTS-STARTPTS [bottom]; \
+			[base][top] overlay=shortest=1 [tmp1]; \
+			[tmp1][bottom] overlay=shortest=1:y=$(top_height) [out] \
+			" \
+		-map "[out]" \
+		-b:v 2500k \
+		$(TIME_OPTIONS) \
+		merge_sbs_tbb.mp4
+
+# mix audio and video
+merged_full.mp4: merge_sbs_tbb.mp4 merged.mp4
+	@echo mix audio and video
+	$(FFMEG_BIN) \
+		-y \
+		-i merge_sbs_tbb.mp4 \
+		-i merged.mp4 \
+		-c copy \
+		-acodec copy \
+		-b:v 2500k \
+		$(TIME_OPTIONS) \
+		merged_full.mp4
+
+
+
 
