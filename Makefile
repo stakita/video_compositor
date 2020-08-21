@@ -31,20 +31,33 @@ READ_ADVANCE_HERO = python -c "import config; print(config.ADVANCE_HERO)"
 READ_VOLUME_HERO = python -c "import config; print(config.VOLUME_HERO)"
 READ_VOLUME_MAX = python -c "import config; print(config.VOLUME_MAX)"
 
-.PHONY: build_params
+NONE=\033[00m
+RED=\033[01;31m
+GREEN=\033[01;32m
+YELLOW=\033[01;33m
+PURPLE=\033[01;35m
+CYAN=\033[01;36m
+WHITE=\033[01;37m
+BOLD=\033[1m
+UNDERLINE=\033[4m
+
+# echo -e "This text is ${RED}red${NONE} and ${GREEN}green${NONE} and ${BOLD}bold${NONE} and ${UNDERLINE}underlined${NONE}."
+
+
+all: $(BUILD_PARAMS) $(HERO_PLUS_WAVEFORM) # merged_full.mp4
+
+.PHONY: build_params all clean clobber distclean
 
 $(BUILD_PARAMS): Makefile
 	@echo recording build parameters
 	build_params.py $< > $@
 
 
-all: $(BUILD_PARAMS) $(HERO_PLUS_WAVEFORM) # merged_full.mp4
-
 clean:
-	rm -f merged.mp4 merge_sbs.mp4 audio_mix.aac merge_sbs_tbb.mp4 merged_full.mp4 waveform.avi waveplot.png
+	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM)
 
-clobber:
-	rm -f merged.mp4 merge_sbs.mp4 audio_mix.aac hero.join.mp4 max.join.mp4 max.join.hemi.mp4
+clobber: clean
+	rm -f $(BUILD_CONFIG) $(BUILD_PARAMS)
 
 distclean:
 	rm -f merged.wav waveform.avi waveplot.png audio_mix.aac
@@ -59,31 +72,32 @@ $(BUILD_CONFIG):
 
 # generate ffmpeg join config for hero files
 $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
-	@echo generate hero ffmpeg join config file
+	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
+
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
 
 # join hero files
 $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
-	@echo concat hero files
+	@echo "${BOLD}concat hero files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
 
 # generate waveform plot
 $(HERO_WAVEFORM_PLOT): $(HERO_JOIN_FILE)
-	@echo generate hero waveform plot
+	@echo "${BOLD}generate hero waveform plot${NONE}"
 	HERO_JOIN_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
-	gen_wave_plot.py --width=$$HERO_JOIN_WIDTH $< --output=$@
+	gen_wave_plot.py --height=100 --channels=1 --width=$$HERO_JOIN_WIDTH $< --output=$@
 
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_PLOT)
-	@echo generate waveform progress video
+	@echo "${BOLD}generate waveform progress video${NONE}"
 	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(HERO_JOIN_FILE)`; \
 	gen_waveform_slider.py $(HERO_WAVEFORM_PLOT) $$DURATION_SECONDS --output=$(HERO_WAVEFORM_FILE)
 
 # 	$(eval DURATION_SECONDS := $(shell ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(HERO_JOIN_FILE)))
 # combine video into single top-by-bottom
 $(HERO_PLUS_WAVEFORM): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
-	@echo combine hero and waveform video vertically
+	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
 
 	TOP_HEIGHT=`video_geometry.py --height $(HERO_JOIN_FILE)`; \
 	TOP_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
@@ -117,13 +131,13 @@ $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES)
 
 # join max files
 $(MAX_JOIN_FILE): $(MAX_JOIN_CONFIG)
-	@echo concat max files
+	@echo "${BOLD}concat max files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
 
 
 # map max files to hemispherical
 $(MAX_JOIN_HEMI_FILE): $(MAX_JOIN_FILE)
-	@echo map max files to hemispherical
+	@echo "${BOLD}map max files to hemispherical${NONE}"
 	$(FFMEG_BIN) \
 		-y \
 		-i $< \
@@ -141,7 +155,7 @@ filter_audio = " \
 
 # mix audio tracks
 audio_mix.aac: $(HERO_JOIN_FILE) $(MAX_JOIN_HEMI_FILE) $(BUILD_CONFIG)
-	@echo mix audio tracks
+	@echo "${BOLD}mix audio tracks${NONE}"
 	$(FFMEG_BIN) \
 		-y \
 		-ss $(shell $(READ_ADVANCE_HERO)) \
@@ -173,7 +187,7 @@ filter_video = " \
 
 # combine video into single side-by-side
 merge_sbs.mp4: $(HERO_JOIN_FILE) $(MAX_JOIN_HEMI_FILE) $(BUILD_CONFIG) # max.join.mp4
-	@echo combine video into single side-by-side
+	@echo "${BOLD}combine video into single side-by-side${NONE}"
 
 	$(eval left_width := `video_geometry.py --width hero.join.mp4`)
 	$(eval right_width := `video_geometry.py --width max.join.hemi.mp4`)
@@ -205,7 +219,7 @@ merge_sbs.mp4: $(HERO_JOIN_FILE) $(MAX_JOIN_HEMI_FILE) $(BUILD_CONFIG) # max.joi
 
 # mix audio and video
 merged.mp4: merge_sbs.mp4 audio_mix.aac $(BUILD_CONFIG)
-	@echo mix audio and video
+	@echo "${BOLD}mix audio and video${NONE}"
 	$(FFMEG_BIN) \
 		-y \
 		-i merge_sbs.mp4 \
@@ -217,18 +231,18 @@ merged.mp4: merge_sbs.mp4 audio_mix.aac $(BUILD_CONFIG)
 		$@
 
 waveplot.png: merged.mp4
-	@echo generate waveplot background
+	@echo "${BOLD}generate waveplot background${NONE}"
 	gen_wave_plot.py merged.mp4 --output=waveplot.png
 
 waveform.avi: merged.mp4 waveplot.png
-	@echo generate waveform progress video
+	@echo "${BOLD}generate waveform progress video${NONE}"
 	$(eval DURATION_SECONDS := $(shell ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 merged.mp4))
 	gen_waveform_slider.py waveplot.png $(DURATION_SECONDS) --output=waveform.avi
 
 
 # combine video into single top-by-bottom
 merge_sbs_tbb.mp4: merged.mp4 waveform.avi $(BUILD_CONFIG)
-	@echo combine video into single top-by-bottom
+	@echo "${BOLD}combine video into single top-by-bottom${NONE}"
 
 # 	$(eval top_height := 704)
 # 	$(eval bottom_height := 200)
@@ -261,7 +275,7 @@ merge_sbs_tbb.mp4: merged.mp4 waveform.avi $(BUILD_CONFIG)
 
 # mix audio and video
 merged_full.mp4: merge_sbs_tbb.mp4 merged.mp4 $(BUILD_CONFIG)
-	@echo mix audio and video
+	@echo "${BOLD}mix audio and video${NONE}"
 	$(FFMEG_BIN) \
 		-y \
 		-i merge_sbs_tbb.mp4 \
