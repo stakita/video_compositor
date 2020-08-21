@@ -12,10 +12,14 @@ Options:
   --fps=<FPS>               Override frames per second [default: 24]
 '''
 import sys
-import cv2
 import numpy as np
-from cv2 import VideoWriter, VideoWriter_fourcc
 import copy
+
+try:
+    import cv2
+except ImportError as e:
+    sys.stderr.write('Error: %s\nTry:\n    pip install opencv-python\n' % e)
+    sys.exit(1)
 
 
 try:
@@ -32,12 +36,13 @@ def generate_waveform_video(background_image, total_seconds, output_file, fps):
     color = (40, 40, 255)
     thickness = 2
 
-    fourcc = VideoWriter_fourcc(*'MP42')
-    video = VideoWriter(output_file, fourcc, float(fps), (width, height))
+    fourcc = cv2.VideoWriter_fourcc(*'MP42')
+    video = cv2.VideoWriter(output_file, fourcc, float(fps), (width, height))
 
     for frame in range(frames):
-        if frame % 24 == 0:
-            print(frame / 24, frame, frames)
+        update_period = 1000
+        if frame % update_period == 0:
+            print('%3.2f %d %d' % (frame / 24, frame, frames))
 
         paint_x = int(frame / frames * width)
 
