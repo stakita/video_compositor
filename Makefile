@@ -12,6 +12,7 @@ HERO_WAVEFORM_FILE = hero.wavform.avi
 HERO_PLUS_WAVEFORM = hero_plus_waveform.mp4
 HERO_RENDER = hero_render.mp4
 HERO_OUTPUT_BITRATE = 30000k
+HERO_SCALING_FACTOR = 0.75
 HERO_GENERATED_FILES = hero.join.wav
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
@@ -110,11 +111,13 @@ $(HERO_AUDIO_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 		-filter:a "volume=$(shell $(READ_VOLUME_HERO))" \
 		$@
 
+
 # generate waveform plot
 $(HERO_WAVEFORM_PLOT): $(HERO_JOIN_FILE) $(HERO_AUDIO_FILE)
 	@echo "${BOLD}generate hero waveform plot${NONE}"
 	HERO_JOIN_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
-	gen_wave_plot.py --height=100 --channels=1 --width=$$HERO_JOIN_WIDTH $(HERO_AUDIO_FILE) --output=$@
+	HERO_SCALED_WIDTH=`python -c "print(int($(HERO_SCALING_FACTOR) * $$HERO_JOIN_WIDTH))"` ; \
+	gen_wave_plot.py --height=100 --channels=1 --width=$$HERO_SCALED_WIDTH $(HERO_AUDIO_FILE) --output=$@
 
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_PLOT)
@@ -128,21 +131,27 @@ $(HERO_PLUS_WAVEFORM): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
 
 	TOP_HEIGHT=`video_geometry.py --height $(HERO_JOIN_FILE)`; \
+	TOP_HEIGHT_SCALED=`python -c "print(int($(HERO_SCALING_FACTOR) * $$TOP_HEIGHT))"` ; \
 	TOP_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
+	TOP_WIDTH_SCALED=`python -c "print(int($(HERO_SCALING_FACTOR) * $$TOP_WIDTH))"` ; \
+	echo TWS: $$TOP_WIDTH_SCALED; \
+	echo THS: $$TOP_HEIGHT_SCALED; \
 	BOTTOM_HEIGHT=`video_geometry.py --height $(HERO_WAVEFORM_FILE)`; \
-	OUTPUT_WIDTH=$$TOP_WIDTH; \
-	OUTPUT_HEIGHT=`python -c "print($$TOP_HEIGHT + $$BOTTOM_HEIGHT)"`; \
+	OUTPUT_WIDTH=$$TOP_WIDTH_SCALED; \
+	OUTPUT_HEIGHT=`python -c "print($$TOP_HEIGHT_SCALED + $$BOTTOM_HEIGHT)"`; \
+	TOP_GEOMETRY="$$TOP_WIDTH_SCALED"x"$$TOP_HEIGHT_SCALED"; \
 	GEOMETRY="$$OUTPUT_WIDTH"x"$$OUTPUT_HEIGHT"; \
+	echo G: $$GEOMETRY; \
 	$(FFMEG_BIN) \
 		-y \
 		-i $(HERO_JOIN_FILE) \
 		-i $(HERO_WAVEFORM_FILE) \
 		-filter_complex " \
 			nullsrc=size=$$GEOMETRY [base]; \
-			[0:v] setpts=PTS-STARTPTS [top]; \
+			[0:v] setpts=PTS-STARTPTS,scale=$$TOP_GEOMETRY [top]; \
 			[1:v] setpts=PTS-STARTPTS [bottom]; \
 			[base][top] overlay=shortest=1 [tmp1]; \
-			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT [out] \
+			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out] \
 			" \
 		-map "[out]" \
 		-b:v $(HERO_OUTPUT_BITRATE) \
