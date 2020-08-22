@@ -12,6 +12,7 @@ HERO_WAVEFORM_FILE = hero.wavform.avi
 HERO_PLUS_WAVEFORM = hero_plus_waveform.mp4
 HERO_RENDER = hero_render.mp4
 HERO_OUTPUT_BITRATE = 30000k
+HERO_GENERATED_FILES = hero.join.wav
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
 MAX_JOIN_CONFIG = max_join_config.txt
@@ -57,11 +58,13 @@ $(BUILD_PARAMS): $(BUILD_CONFIG) Makefile
 
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
-	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_RENDER)
+	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_RENDER) $(HERO_GENERATED_FILES)
+	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_PLUS_WAVEFORM) $(MAX_RENDER)
 
 clobber: clean
 	@echo "${BOLD}clobber - kill them all${NONE}"
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
+	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_HEMI_FILE)
 	rm -f $(BUILD_CONFIG) $(BUILD_PARAMS)
 
 distclean:
