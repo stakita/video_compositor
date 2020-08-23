@@ -42,12 +42,14 @@ MERGED_RENDER = merged_render.mp4
 FFMEG_BIN = ~/bin/ffmpeg
 
 READ_TIME_OPTIONS = python -c "import config; print(config.TIME_OPTIONS)"
-READ_ADVANCE_MAX = python -c "import config; print(config.ADVANCE_MAX)"
 READ_ADVANCE_MAX_SECONDS = python -c "import config; print(config.ADVANCE_MAX_SECONDS)"
-READ_ADVANCE_HERO = python -c "import config; print(config.ADVANCE_HERO)"
 READ_ADVANCE_HERO_SECONDS = python -c "import config; print(config.ADVANCE_HERO_SECONDS)"
+# next two lines horrible hacks - will get rid of these soon
+READ_ADVANCE_MAX = python -c "h, r =divmod($(shell $(READ_ADVANCE_MAX_SECONDS)), 3600); m, s = divmod(r, 60); print('{:0>2}:{:0>2}:{:05.3f}'.format(int(h), int(m), s))"
+READ_ADVANCE_HERO = python -c "h, r =divmod($(shell $(READ_ADVANCE_HERO_SECONDS)), 3600); m, s = divmod(r, 60); print('{:0>2}:{:0>2}:{:05.3f}'.format(int(h), int(m), s))"
 READ_VOLUME_HERO = python -c "import config; print(config.VOLUME_HERO)"
 READ_VOLUME_MAX = python -c "import config; print(config.VOLUME_MAX)"
+READ_HERO_AUDIO_OPTS = python -c "import config; print(config.HERO_AUDIO_OPTS)"
 
 NONE=\033[00m
 RED=\033[01;31m
@@ -89,7 +91,7 @@ distclean:
 	#rm -f merged.wav waveform.avi waveplot.png audio_mix.aac
 
 
-DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX = '00:00:00.000'\nADVANCE_HERO = '00:00:00.000'\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\n"
+DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = ', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
 
 $(BUILD_CONFIG):
 	@echo generate build config file
@@ -115,9 +117,9 @@ $(HERO_AUDIO_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 		-y \
 		-ss $(shell $(READ_ADVANCE_HERO)) \
 		-i $(HERO_JOIN_FILE) \
-		-filter:a "volume=$(shell $(READ_VOLUME_HERO))" \
+		-filter_complex \
+		"volume=$(shell $(READ_VOLUME_HERO))$(shell $(READ_HERO_AUDIO_OPTS))" \
 		$@
-
 
 # generate waveform plot
 $(HERO_WAVEFORM_PLOT): $(HERO_JOIN_FILE) $(HERO_AUDIO_FILE)
