@@ -17,9 +17,21 @@ HERO_GENERATED_FILES = hero.join.wav
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
 MAX_JOIN_CONFIG = max_join_config.txt
+MAX_JOIN_FISHEYE_FILE = max.join.fisheye.mp4
 MAX_JOIN_FILE = max.join.mp4
+MAX_AUDIO_FILE = max.join.aac
+MAX_WAVEFORM_PLOT = max.wavform.plot.png
+MAX_WAVEFORM_FILE = max.wavform.avi
+MAX_PLUS_WAVEFORM = max_plus_waveform.mp4
+MAX_RENDER = max_render.mp4
+MAX_OUTPUT_BITRATE = 30000k
+MAX_SCALING_FACTOR = 1.0
+MAX_GENERATED_FILES = max.join.wav
 
-MAX_JOIN_HEMI_FILE = max.join.hemi.mp4
+MERGED_OUTPUT_BITRATE = 30000k
+MERGED_SBS = merge_sbs.mp4
+MERGED_AUDIO = merged_audio.aac
+MERGED_RENDER = merged_render.mp4
 
 # HERO_RAW_FILES := hero5/*.MP4
 # HERO_INTERMEDIATE_FILES = $(patsubst %.MP4, )
@@ -31,7 +43,9 @@ FFMEG_BIN = ~/bin/ffmpeg
 
 READ_TIME_OPTIONS = python -c "import config; print(config.TIME_OPTIONS)"
 READ_ADVANCE_MAX = python -c "import config; print(config.ADVANCE_MAX)"
+READ_ADVANCE_MAX_SECONDS = python -c "import config; print(config.ADVANCE_MAX_SECONDS)"
 READ_ADVANCE_HERO = python -c "import config; print(config.ADVANCE_HERO)"
+READ_ADVANCE_HERO_SECONDS = python -c "import config; print(config.ADVANCE_HERO_SECONDS)"
 READ_VOLUME_HERO = python -c "import config; print(config.VOLUME_HERO)"
 READ_VOLUME_MAX = python -c "import config; print(config.VOLUME_MAX)"
 
@@ -48,7 +62,7 @@ UNDERLINE=\033[4m
 # echo -e "This text is ${RED}red${NONE} and ${GREEN}green${NONE} and ${BOLD}bold${NONE} and ${UNDERLINE}underlined${NONE}."
 
 
-all: $(BUILD_PARAMS) $(HERO_RENDER) # merged_full.mp4
+all: $(BUILD_PARAMS) $(MERGED_RENDER) # merged_full.mp4
 
 .PHONY: build_params all clean clobber distclean
 
@@ -65,7 +79,7 @@ clean:
 clobber: clean
 	@echo "${BOLD}clobber - kill them all${NONE}"
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
-	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_HEMI_FILE)
+	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
 	rm -f $(BUILD_CONFIG) $(BUILD_PARAMS)
 
 distclean:
@@ -81,11 +95,11 @@ $(BUILD_CONFIG):
 	@echo generate build config file
 	@echo $(DEFAULT_CONFIG) > $@
 
+#=======================================================================================================
 
 # generate ffmpeg join config for hero files
 $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
-
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
 
@@ -94,16 +108,9 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
 
-# https://trac.ffmpeg.org/wiki/AudioChannelManipulation
-filter_audio = " \
-[0:a] volume=$(VOLUME_HERO) [left]; \
-[1:a] volume=$(VOLUME_HERO) [right]; \
-[left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
-"
-
 # mix audio tracks
 $(HERO_AUDIO_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}mix hero audio tracks${NONE}"
+	@echo "${BOLD}extract time offset hero audio track${NONE}"
 	$(FFMEG_BIN) \
 		-y \
 		-ss $(shell $(READ_ADVANCE_HERO)) \
@@ -123,10 +130,10 @@ $(HERO_WAVEFORM_PLOT): $(HERO_JOIN_FILE) $(HERO_AUDIO_FILE)
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_PLOT)
 	@echo "${BOLD}generate waveform progress video${NONE}"
 	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(HERO_JOIN_FILE)`; \
+	DURATION_TRIMMED=`python -c "print($$DURATION_SECONDS - $(shell $(READ_ADVANCE_HERO_SECONDS)))"`; \
 	gen_waveform_slider.py $(HERO_WAVEFORM_PLOT) $$DURATION_SECONDS --output=$(HERO_WAVEFORM_FILE)
 
-# 	$(eval DURATION_SECONDS := $(shell ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(HERO_JOIN_FILE)))
-# combine video into single top-by-bottom
+# combine video with waveform video
 $(HERO_PLUS_WAVEFORM): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
 
@@ -144,6 +151,7 @@ $(HERO_PLUS_WAVEFORM): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 	echo G: $$GEOMETRY; \
 	$(FFMEG_BIN) \
 		-y \
+		-ss $(shell $(READ_ADVANCE_HERO)) \
 		-i $(HERO_JOIN_FILE) \
 		-i $(HERO_WAVEFORM_FILE) \
 		-filter_complex " \
@@ -171,20 +179,21 @@ $(HERO_RENDER): $(HERO_PLUS_WAVEFORM) $(HERO_AUDIO_FILE) $(BUILD_CONFIG)
 		$(shell $(READ_TIME_OPTIONS)) \
 		$(HERO_RENDER)
 
+#=======================================================================================================
 
 # generate ffmpeg join config for max files
 $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES)
+	@echo "${BOLD}generate max ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(MAX_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
 
 # join max files
-$(MAX_JOIN_FILE): $(MAX_JOIN_CONFIG)
+$(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
 	@echo "${BOLD}concat max files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
 
-
 # map max files to hemispherical
-$(MAX_JOIN_HEMI_FILE): $(MAX_JOIN_FILE)
+$(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
 	@echo "${BOLD}map max files to hemispherical${NONE}"
 	$(FFMEG_BIN) \
 		-y \
@@ -194,27 +203,77 @@ $(MAX_JOIN_HEMI_FILE): $(MAX_JOIN_FILE)
 		-c:a copy \
 		$@
 
-# https://trac.ffmpeg.org/wiki/AudioChannelManipulation
-filter_audio = " \
-[0:a] volume=$(VOLUME_HERO) [left]; \
-[1:a] volume=$(VOLUME_MAX) [right]; \
-[left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
-"
-
 # mix audio tracks
-audio_mix.aac: $(HERO_JOIN_FILE) $(MAX_JOIN_HEMI_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}mix audio tracks${NONE}"
+$(MAX_AUDIO_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
+	@echo "${BOLD}extract time offset max audio track${NONE}"
 	$(FFMEG_BIN) \
 		-y \
-		-ss $(shell $(READ_ADVANCE_HERO)) \
-		-i $(HERO_JOIN_FILE) \
 		-ss $(shell $(READ_ADVANCE_MAX)) \
-		-i $(MAX_JOIN_HEMI_FILE) \
-		-filter_complex $(filter_audio) \
-		-map "[a]" \
-		-q:a 4 \
+		-i $(MAX_JOIN_FILE) \
+		-filter:a "volume=$(shell $(READ_VOLUME_MAX))" \
+		$@
+
+# generate waveform plot
+$(MAX_WAVEFORM_PLOT): $(MAX_JOIN_FILE) $(MAX_AUDIO_FILE)
+	@echo "${BOLD}generate max waveform plot${NONE}"
+	MAX_JOIN_WIDTH=`video_geometry.py --width $(MAX_JOIN_FILE)`; \
+	MAX_SCALED_WIDTH=`python -c "print(int($(MAX_SCALING_FACTOR) * $$MAX_JOIN_WIDTH))"` ; \
+	gen_wave_plot.py --height=100 --channels=1 --width=$$MAX_SCALED_WIDTH $(MAX_AUDIO_FILE) --output=$@
+
+# generate waveform file
+$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_PLOT)
+	@echo "${BOLD}generate waveform progress video${NONE}"
+	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
+	DURATION_TRIMMED=`python -c "print($$DURATION_SECONDS - $(shell $(READ_ADVANCE_MAX_SECONDS)))"`; \
+	gen_waveform_slider.py $(MAX_WAVEFORM_PLOT) $$DURATION_TRIMMED --output=$(MAX_WAVEFORM_FILE)
+
+# combine video with waveform video
+$(MAX_PLUS_WAVEFORM): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
+	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
+
+	TOP_HEIGHT=`video_geometry.py --height $(MAX_JOIN_FILE)`; \
+	TOP_HEIGHT_SCALED=`python -c "print(int($(MAX_SCALING_FACTOR) * $$TOP_HEIGHT))"` ; \
+	TOP_WIDTH=`video_geometry.py --width $(MAX_JOIN_FILE)`; \
+	TOP_WIDTH_SCALED=`python -c "print(int($(MAX_SCALING_FACTOR) * $$TOP_WIDTH))"` ; \
+	echo TWS: $$TOP_WIDTH_SCALED; \
+	echo THS: $$TOP_HEIGHT_SCALED; \
+	BOTTOM_HEIGHT=`video_geometry.py --height $(MAX_WAVEFORM_FILE)`; \
+	OUTPUT_WIDTH=$$TOP_WIDTH_SCALED; \
+	OUTPUT_HEIGHT=`python -c "print($$TOP_HEIGHT_SCALED + $$BOTTOM_HEIGHT)"`; \
+	TOP_GEOMETRY="$$TOP_WIDTH_SCALED"x"$$TOP_HEIGHT_SCALED"; \
+	GEOMETRY="$$OUTPUT_WIDTH"x"$$OUTPUT_HEIGHT"; \
+	echo G: $$GEOMETRY; \
+	$(FFMEG_BIN) \
+		-y \
+		-ss $(shell $(READ_ADVANCE_MAX)) \
+		-i $(MAX_JOIN_FILE) \
+		-i $(MAX_WAVEFORM_FILE) \
+		-filter_complex " \
+			nullsrc=size=$$GEOMETRY [base]; \
+			[0:v] setpts=PTS-STARTPTS,scale=$$TOP_GEOMETRY [top]; \
+			[1:v] setpts=PTS-STARTPTS [bottom]; \
+			[base][top] overlay=shortest=1 [tmp1]; \
+			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out] \
+			" \
+		-map "[out]" \
+		-b:v $(MAX_OUTPUT_BITRATE) \
 		$(shell $(READ_TIME_OPTIONS)) \
 		$@
+
+# mix hereo audio and video
+$(MAX_RENDER): $(MAX_PLUS_WAVEFORM) $(MAX_AUDIO_FILE) $(BUILD_CONFIG)
+	@echo "${BOLD}mix hero render audio and video${NONE}"
+	$(FFMEG_BIN) \
+		-y \
+		-i $(MAX_PLUS_WAVEFORM) \
+		-i $(MAX_AUDIO_FILE) \
+		-c copy \
+		-acodec copy \
+		-b:v $(MAX_OUTPUT_BITRATE) \
+		$(shell $(READ_TIME_OPTIONS)) \
+		$(MAX_RENDER)
+
+
 
 # # [0:a][1:a]amerge=inputs=2[a];
 # # [a][out]concat=n=2
@@ -224,23 +283,23 @@ audio_mix.aac: $(HERO_JOIN_FILE) $(MAX_JOIN_HEMI_FILE) $(BUILD_CONFIG)
 # #  -filter:a "channelmap=0-0|0-1|1-0|1-1" \
 
 # https://trac.ffmpeg.org/wiki/Create%20a%20mosaic%20out%20of%20several%20input%20videos
-filter_video = " \
-	nullsrc=size=$(GEOMETRY) [base]; \
-	[0:v] setpts=PTS-STARTPTS [left]; \
-	[1:v] setpts=PTS-STARTPTS [right]; \
-	[base][left] overlay=shortest=1 [tmp1]; \
-	[tmp1][right] overlay=shortest=1:x=$(RIGHT_OFFSET) [out] \
-	"
+# filter_video = " \
+# 	nullsrc=size=$(GEOMETRY) [base]; \
+# 	[0:v] setpts=PTS-STARTPTS [left]; \
+# 	[1:v] setpts=PTS-STARTPTS [right]; \
+# 	[base][left] overlay=shortest=1 [tmp1]; \
+# 	[tmp1][right] overlay=shortest=1:x=$(RIGHT_OFFSET) [out] \
+# 	"
 
 
 # combine video into single side-by-side
-merge_sbs.mp4: $(HERO_JOIN_FILE) $(MAX_JOIN_HEMI_FILE) $(BUILD_CONFIG) # max.join.mp4
+$(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
 	@echo "${BOLD}combine video into single side-by-side${NONE}"
 
-	$(eval left_width := `video_geometry.py --width hero.join.mp4`)
-	$(eval right_width := `video_geometry.py --width max.join.hemi.mp4`)
-	$(eval left_height := `video_geometry.py --height hero.join.mp4`)
-	$(eval right_height := `video_geometry.py --height max.join.hemi.mp4`)
+	$(eval left_width := `video_geometry.py --width $(HERO_RENDER)`)
+	$(eval right_width := `video_geometry.py --width $(MAX_RENDER)`)
+	$(eval left_height := `video_geometry.py --height $(HERO_RENDER)`)
+	$(eval right_height := `video_geometry.py --height $(MAX_RENDER)`)
 
 	$(eval output_width := $(shell python -c "print($(left_width) + $(right_width))"))
 	$(eval output_height := $(shell python -c "print(max($(left_height), $(right_height)))"))
@@ -249,10 +308,8 @@ merge_sbs.mp4: $(HERO_JOIN_FILE) $(MAX_JOIN_HEMI_FILE) $(BUILD_CONFIG) # max.joi
 
 	$(FFMEG_BIN) \
 		-y \
-		-ss $(shell $(READ_ADVANCE_HERO)) \
-		-i $(HERO_JOIN_FILE) \
-		-ss $(shell $(READ_ADVANCE_MAX)) \
-		-i $(MAX_JOIN_HEMI_FILE) \
+		-i $(HERO_RENDER) \
+		-i $(MAX_RENDER) \
 		-filter_complex " \
 			nullsrc=size=$(GEOMETRY) [base]; \
 			[0:v] setpts=PTS-STARTPTS [left]; \
@@ -261,78 +318,48 @@ merge_sbs.mp4: $(HERO_JOIN_FILE) $(MAX_JOIN_HEMI_FILE) $(BUILD_CONFIG) # max.joi
 			[tmp1][right] overlay=shortest=1:x=$(left_width) [out] \
 			" \
 		-map "[out]" \
-		-b:v 2500k \
+		-b:v $(MERGED_OUTPUT_BITRATE) \
+		$(shell $(READ_TIME_OPTIONS)) \
+		$@
+
+# https://trac.ffmpeg.org/wiki/AudioChannelManipulation
+# filter_audio = " \
+# [0:a] volume=$(VOLUME_HERO) [left]; \
+# [1:a] volume=$(VOLUME_MAX) [right]; \
+# [left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
+# "
+
+# https://trac.ffmpeg.org/wiki/AudioChannelManipulation
+filter_audio = " \
+[0:a][1:a]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
+"
+
+# mix audio tracks
+$(MERGED_AUDIO): $(HERO_AUDIO_FILE) $(MAX_AUDIO_FILE)
+	@echo "${BOLD}mix audio tracks${NONE}"
+	$(FFMEG_BIN) \
+		-y \
+		-i $(HERO_AUDIO_FILE) \
+		-i $(MAX_AUDIO_FILE) \
+		-filter_complex $(filter_audio) \
+		-map "[a]" \
+		-q:a 4 \
 		$(shell $(READ_TIME_OPTIONS)) \
 		$@
 
 # mix audio and video
-merged.mp4: merge_sbs.mp4 audio_mix.aac $(BUILD_CONFIG)
+$(MERGED_RENDER): merge_sbs.mp4 merged_audio.aac
 	@echo "${BOLD}mix audio and video${NONE}"
 	$(FFMEG_BIN) \
 		-y \
 		-i merge_sbs.mp4 \
-		-i audio_mix.aac \
+		-i merged_audio.aac \
 		-c copy \
 		-acodec copy \
-		-b:v 2500k \
+		-b:v $(MERGED_OUTPUT_BITRATE) \
 		$(shell $(READ_TIME_OPTIONS)) \
 		$@
 
-waveplot.png: merged.mp4
-	@echo "${BOLD}generate waveplot background${NONE}"
-	gen_wave_plot.py merged.mp4 --output=waveplot.png
-
-waveform.avi: merged.mp4 waveplot.png
-	@echo "${BOLD}generate waveform progress video${NONE}"
-	$(eval DURATION_SECONDS := $(shell ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 merged.mp4))
-	gen_waveform_slider.py waveplot.png $(DURATION_SECONDS) --output=waveform.avi
-
-
-# combine video into single top-by-bottom
-merge_sbs_tbb.mp4: merged.mp4 waveform.avi $(BUILD_CONFIG)
-	@echo "${BOLD}combine video into single top-by-bottom${NONE}"
-
-# 	$(eval top_height := 704)
-# 	$(eval bottom_height := 200)
-	$(eval top_height := `video_geometry.py --height merged.mp4`)
-	$(eval top_width := `video_geometry.py --width merged.mp4`)
-	$(eval bottom_height := `video_geometry.py --height waveform.avi`)
-
-# 	$(eval output_width := 2262)
-# 	$(eval output_height := 904)
-	$(eval output_width := $(top_width))
-	$(eval output_height := $(shell python -c "print($(top_height) + $(bottom_height))"))
-
-	$(eval GEOMETRY := $(output_width)x$(output_height))
-
-	$(FFMEG_BIN) \
-		-y \
-		-i merged.mp4 \
-		-i waveform.avi \
-		-filter_complex " \
-			nullsrc=size=$(GEOMETRY) [base]; \
-			[0:v] setpts=PTS-STARTPTS [top]; \
-			[1:v] setpts=PTS-STARTPTS [bottom]; \
-			[base][top] overlay=shortest=1 [tmp1]; \
-			[tmp1][bottom] overlay=shortest=1:y=$(top_height) [out] \
-			" \
-		-map "[out]" \
-		-b:v 2500k \
-		$(shell $(READ_TIME_OPTIONS)) \
-		merge_sbs_tbb.mp4
-
-# mix audio and video
-merged_full.mp4: merge_sbs_tbb.mp4 merged.mp4 $(BUILD_CONFIG)
-	@echo "${BOLD}mix audio and video${NONE}"
-	$(FFMEG_BIN) \
-		-y \
-		-i merge_sbs_tbb.mp4 \
-		-i merged.mp4 \
-		-c copy \
-		-acodec copy \
-		-b:v 2500k \
-		$(shell $(READ_TIME_OPTIONS)) \
-		merged_full.mp4
 
 
 
