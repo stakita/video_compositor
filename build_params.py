@@ -33,6 +33,9 @@ def get_build_params(filename):
     real_file = os.path.realpath(filename)
     real_dir = os.path.dirname(real_file)
     is_git_repo = os.path.exists(real_dir + '/.git')
+    git_rev = None
+    git_branch = None
+    git_status = None
     if is_git_repo:
         git_rev = sh.git('-c', 'color.status=false', 'rev-parse', 'HEAD', _cwd=real_dir).strip()
         git_branch = sh.git('-c', 'color.status=false', 'branch', '--show-current', _cwd=real_dir).strip()
