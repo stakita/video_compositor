@@ -69,33 +69,62 @@ all: $(BUILD_PARAMS) $(MERGED_RENDER) # merged_full.mp4
 .PHONY: build_params all clean clobber distclean
 
 $(BUILD_PARAMS): $(BUILD_CONFIG) Makefile
-	@echo recording build parameters
+	@echo "${BOLD}recording build parameters${NONE}"
 	build_params.py Makefile > $@
-
+	cp Makefile Makefile.build
 
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
-	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_RENDER) $(HERO_GENERATED_FILES)
-	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_PLUS_WAVEFORM) $(MAX_RENDER)
+	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
+	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_PLUS_WAVEFORM) $(MAX_RENDER) $(MAX_GENERATED_FILES)
+	rm -f audio_test
 
 clobber: clean
 	@echo "${BOLD}clobber - kill them all${NONE}"
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
-	rm -f $(BUILD_CONFIG) $(BUILD_PARAMS)
+	rm -f $(MERGED_SBS) $(MERGED_AUDIO) $(MERGED_RENDER)
+	rm -f $(BUILD_CONFIG) $(BUILD_PARAMS) Makefile.build
+	rm -rf __pycache__
 
 distclean:
 	@echo "${BOLD}distclean - leave final file and config${NONE}"
-	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM)
+	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_GENERATED_FILES)
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
-	#rm -f merged.wav waveform.avi waveplot.png audio_mix.aac
+	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_PLUS_WAVEFORM) $(MAX_GENERATED_FILES)
+	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FISHEYE_FILE) $(MAX_JOIN_FILE)
+	rm -f $(MERGED_SBS) $(MERGED_AUDIO)
+	rm -f audio_test
+	rm -rf __pycache__
 
 
 DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = ', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
 
 $(BUILD_CONFIG):
-	@echo generate build config file
+	@echo "${BOLD}generate build config file${NONE}"
 	@echo $(DEFAULT_CONFIG) > $@
+
+filter_audio_test = " \
+[0:a] volume=$(shell $(READ_VOLUME_HERO)) [left]; \
+[1:a] volume=$(shell $(READ_VOLUME_MAX)) [right]; \
+[left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
+"
+
+audio_test: $(BUILD_PARAMS)
+	@echo "${BOLD}generate audio test file${NONE}"
+	HERO_FILE=$(firstword $(HERO_RAW_FILES)); \
+	MAX_FILE=$(firstword $(MAX_RAW_FILES)); \
+	$(FFMEG_BIN) \
+		-y \
+		-ss $(shell $(READ_ADVANCE_HERO)) \
+		-i $$HERO_FILE \
+		-ss $(shell $(READ_ADVANCE_MAX)) \
+		-i $$MAX_FILE \
+		-filter_complex $(filter_audio_test) \
+		-map "[a]" \
+		-q:a 4 \
+		$(shell $(READ_TIME_OPTIONS)) \
+		$@.aac
 
 #=======================================================================================================
 
@@ -313,11 +342,11 @@ $(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
 		-i $(HERO_RENDER) \
 		-i $(MAX_RENDER) \
 		-filter_complex " \
-			nullsrc=size=$(GEOMETRY) [base]; \
+			color=size=$(GEOMETRY):duration=1.0:color=Black [base]; \
 			[0:v] setpts=PTS-STARTPTS [left]; \
 			[1:v] setpts=PTS-STARTPTS [right]; \
-			[base][left] overlay=shortest=1 [tmp1]; \
-			[tmp1][right] overlay=shortest=1:x=$(left_width) [out] \
+			[base][left] overlay=shortest=0 [tmp1]; \
+			[tmp1][right] overlay=shortest=0:x=$(left_width) [out] \
 			" \
 		-map "[out]" \
 		-b:v $(MERGED_OUTPUT_BITRATE) \
@@ -332,18 +361,26 @@ $(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
 # "
 
 # https://trac.ffmpeg.org/wiki/AudioChannelManipulation
-filter_audio = " \
-[0:a][1:a]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
-"
+# filter_audio = " \
+# [0:a][1:a]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
+# "
 
 # mix audio tracks
 $(MERGED_AUDIO): $(HERO_AUDIO_FILE) $(MAX_AUDIO_FILE)
 	@echo "${BOLD}mix audio tracks${NONE}"
+	DURATION_0=`ffprobe -i hero_trim.mp4 -show_entries format=duration -v quiet -of csv="p=0"`; \
+	DURATION_1=`ffprobe -i max_trim.mp4 -show_entries format=duration -v quiet -of csv="p=0"`; \
+	DURATION_TOTAL=`python -c "print(max($$DURATION_0, $$DURATION_1))"`; \
+	FILTER_AUDIO=" \
+	[0:a] apad=whole_dur=$$DURATION_TOTAL [left]; \
+	[1:a] apad=whole_dur=$$DURATION_TOTAL [right]; \
+	[left][right] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
+	"; \
 	$(FFMEG_BIN) \
 		-y \
 		-i $(HERO_AUDIO_FILE) \
 		-i $(MAX_AUDIO_FILE) \
-		-filter_complex $(filter_audio) \
+		-filter_complex $$FILTER_AUDIO \
 		-map "[a]" \
 		-q:a 4 \
 		$(shell $(READ_TIME_OPTIONS)) \
