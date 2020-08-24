@@ -368,8 +368,8 @@ $(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
 # mix audio tracks
 $(MERGED_AUDIO): $(HERO_AUDIO_FILE) $(MAX_AUDIO_FILE)
 	@echo "${BOLD}mix audio tracks${NONE}"
-	DURATION_0=`ffprobe -i hero_trim.mp4 -show_entries format=duration -v quiet -of csv="p=0"`; \
-	DURATION_1=`ffprobe -i max_trim.mp4 -show_entries format=duration -v quiet -of csv="p=0"`; \
+	DURATION_0=`ffprobe -i $(HERO_AUDIO_FILE) -show_entries format=duration -v quiet -of csv="p=0"`; \
+	DURATION_1=`ffprobe -i $(MAX_AUDIO_FILE) -show_entries format=duration -v quiet -of csv="p=0"`; \
 	DURATION_TOTAL=`python -c "print(max($$DURATION_0, $$DURATION_1))"`; \
 	FILTER_AUDIO=" \
 	[0:a] apad=whole_dur=$$DURATION_TOTAL [left]; \
@@ -380,7 +380,7 @@ $(MERGED_AUDIO): $(HERO_AUDIO_FILE) $(MAX_AUDIO_FILE)
 		-y \
 		-i $(HERO_AUDIO_FILE) \
 		-i $(MAX_AUDIO_FILE) \
-		-filter_complex $$FILTER_AUDIO \
+		-filter_complex "$$FILTER_AUDIO" \
 		-map "[a]" \
 		-q:a 4 \
 		$(shell $(READ_TIME_OPTIONS)) \
