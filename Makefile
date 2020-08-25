@@ -366,10 +366,12 @@ $(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
 # "
 
 # mix audio tracks
-$(MERGED_AUDIO): $(HERO_AUDIO_FILE) $(MAX_AUDIO_FILE)
+$(MERGED_AUDIO): $(HERO_AUDIO_FILE) $(MAX_AUDIO_FILE) $(HERO_RENDER) $(MAX_RENDER)
 	@echo "${BOLD}mix audio tracks${NONE}"
-	DURATION_0=`ffprobe -i $(HERO_AUDIO_FILE) -show_entries format=duration -v quiet -of csv="p=0"`; \
-	DURATION_1=`ffprobe -i $(MAX_AUDIO_FILE) -show_entries format=duration -v quiet -of csv="p=0"`; \
+	# Looks like ffmpeg doesn't generate aac timecodes properly. To deal with this, we use the aac files
+	# for audio data, but take the duration from the rendered mp4 files which is a more accurate duration figure
+	DURATION_0=`ffprobe -i $(HERO_RENDER) -show_entries format=duration -v quiet -of csv="p=0"`; \
+	DURATION_1=`ffprobe -i $(MAX_RENDER) -show_entries format=duration -v quiet -of csv="p=0"`; \
 	DURATION_TOTAL=`python -c "print(max($$DURATION_0, $$DURATION_1))"`; \
 	FILTER_AUDIO=" \
 	[0:a] apad=whole_dur=$$DURATION_TOTAL [left]; \
