@@ -139,7 +139,7 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
 
-# mix audio tracks
+# mix audio track
 $(HERO_AUDIO_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}extract time offset hero audio track${NONE}"
 	$(FFMEG_BIN) \
@@ -165,8 +165,8 @@ $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_PLOT)
 	gen_waveform_slider.py $(HERO_WAVEFORM_PLOT) $$DURATION_SECONDS --output=$(HERO_WAVEFORM_FILE)
 
 # combine video with waveform video
-$(HERO_PLUS_WAVEFORM): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
+$(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(HERO_AUDIO_FILE) $(BUILD_CONFIG)
+	@echo "${BOLD}combine hero and waveform video vertically and audio${NONE}"
 
 	TOP_HEIGHT=`video_geometry.py --height $(HERO_JOIN_FILE)`; \
 	TOP_HEIGHT_SCALED=`python -c "print(int($(HERO_SCALING_FACTOR) * $$TOP_HEIGHT))"` ; \
@@ -185,30 +185,19 @@ $(HERO_PLUS_WAVEFORM): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 		-ss $(shell $(READ_ADVANCE_HERO)) \
 		-i $(HERO_JOIN_FILE) \
 		-i $(HERO_WAVEFORM_FILE) \
+		-i $(HERO_AUDIO_FILE) \
 		-filter_complex " \
 			nullsrc=size=$$GEOMETRY [base]; \
 			[0:v] setpts=PTS-STARTPTS,scale=$$TOP_GEOMETRY [top]; \
 			[1:v] setpts=PTS-STARTPTS [bottom]; \
 			[base][top] overlay=shortest=1 [tmp1]; \
-			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out] \
-			" \
+			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out]; \
+			[2:a]volume=1.0" \
 		-map "[out]" \
 		-b:v $(HERO_OUTPUT_BITRATE) \
 		$(shell $(READ_TIME_OPTIONS)) \
 		$@
 
-# mix hereo audio and video
-$(HERO_RENDER): $(HERO_PLUS_WAVEFORM) $(HERO_AUDIO_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}mix hero render audio and video${NONE}"
-	$(FFMEG_BIN) \
-		-y \
-		-i $(HERO_PLUS_WAVEFORM) \
-		-i $(HERO_AUDIO_FILE) \
-		-c copy \
-		-acodec copy \
-		-b:v $(HERO_OUTPUT_BITRATE) \
-		$(shell $(READ_TIME_OPTIONS)) \
-		$(HERO_RENDER)
 
 #=======================================================================================================
 
@@ -234,7 +223,7 @@ $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
 		-c:a copy \
 		$@
 
-# mix audio tracks
+# mix audio track
 $(MAX_AUDIO_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}extract time offset max audio track${NONE}"
 	$(FFMEG_BIN) \
@@ -259,7 +248,7 @@ $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_PLOT)
 	gen_waveform_slider.py $(MAX_WAVEFORM_PLOT) $$DURATION_TRIMMED --output=$(MAX_WAVEFORM_FILE)
 
 # combine video with waveform video
-$(MAX_PLUS_WAVEFORM): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
+$(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(MAX_AUDIO_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
 
 	TOP_HEIGHT=`video_geometry.py --height $(MAX_JOIN_FILE)`; \
@@ -279,32 +268,21 @@ $(MAX_PLUS_WAVEFORM): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
 		-ss $(shell $(READ_ADVANCE_MAX)) \
 		-i $(MAX_JOIN_FILE) \
 		-i $(MAX_WAVEFORM_FILE) \
+		-i $(MAX_AUDIO_FILE) \
 		-filter_complex " \
 			nullsrc=size=$$GEOMETRY [base]; \
 			[0:v] setpts=PTS-STARTPTS,scale=$$TOP_GEOMETRY [top]; \
 			[1:v] setpts=PTS-STARTPTS [bottom]; \
 			[base][top] overlay=shortest=1 [tmp1]; \
-			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out] \
-			" \
+			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out]; \
+			[2:a]volume=1.0" \
 		-map "[out]" \
 		-b:v $(MAX_OUTPUT_BITRATE) \
 		$(shell $(READ_TIME_OPTIONS)) \
 		$@
 
-# mix hereo audio and video
-$(MAX_RENDER): $(MAX_PLUS_WAVEFORM) $(MAX_AUDIO_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}mix hero render audio and video${NONE}"
-	$(FFMEG_BIN) \
-		-y \
-		-i $(MAX_PLUS_WAVEFORM) \
-		-i $(MAX_AUDIO_FILE) \
-		-c copy \
-		-acodec copy \
-		-b:v $(MAX_OUTPUT_BITRATE) \
-		$(shell $(READ_TIME_OPTIONS)) \
-		$(MAX_RENDER)
 
-
+#=======================================================================================================
 
 # # [0:a][1:a]amerge=inputs=2[a];
 # # [a][out]concat=n=2
