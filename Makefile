@@ -73,6 +73,8 @@ $(BUILD_PARAMS): $(BUILD_CONFIG) Makefile
 	build_params.py Makefile > $@
 	cp Makefile Makefile.build
 
+map: $(MERGED_MAP_RENDER)
+
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
 	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
@@ -327,10 +329,10 @@ $(TILE_MAP_CLOSE_VIDEO): $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META)
 	$(TILE_MAP_CLOSE_VIDEO_TOOL) $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META) --output=$(TILE_MAP_CLOSE_VIDEO) --tstart=$(shell $(READ_ADVANCE_MAX_SECONDS))
 
 
-TRACK_MAP_VIDEO=tilemap_render.mp4
+TRACK_MAP_RENDER=tilemap_render.mp4
 TRACK_MAP_OUTPUT_BITRATE=10000k
 
-$(TRACK_MAP_VIDEO): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
+$(TRACK_MAP_RENDER): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
 	$(FFMEG_BIN) \
 		-y \
 		-i $(TILEMAP_WIDE_VIDEO) \
@@ -394,14 +396,14 @@ $(MERGED_RENDER): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG)
 		$@
 
 
+#=======================================================================================================
 
 MERGED_MAP_OUTPUT_BITRATE = 40000k
-
+MERGED_MAP_RENDER=merged_map_render.mp4
 
 # combine video into single side-by-side
-# $(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
-merge_sbs.test.mp4:
-	@echo "${BOLD}combine video into single side-by-side${NONE}"
+$(MERGED_MAP_RENDER): #$(HERO_RENDER) $(MAX_RENDER) $(TRACK_MAP_RENDER)
+	@echo "${BOLD}combine video and map renders into single view${NONE}"
 
 	$(eval left_width := `video_geometry.py --width $(HERO_RENDER)`)
 	$(eval right_width := `video_geometry.py --width $(MAX_RENDER)`)
@@ -426,7 +428,7 @@ merge_sbs.test.mp4:
 			" \
 		-map "[out]" \
 		-b:v $(MERGED_MAP_OUTPUT_BITRATE) \
-		-t 00:10:00.000 \
+		$(shell $(READ_TIME_OPTIONS)) \
 		$@
 
 
