@@ -284,6 +284,54 @@ $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(MAX_AUDIO_FILE) $(BUILD_C
 
 #=======================================================================================================
 
+JOIN_GPS=join_gps.gpx
+GPS_INTERMEDIATE_JSON=gps_inter.json
+GOPRO2GPX=gopro2gpx
+PROCESS_GPX=process.rb
+TILEMAP_WIDE_PNG=tilemap_wide.png
+TILEMAP_WIDE_PNG_RESIZE_CROP_PNG=$(TILEMAP_WIDE_PNG).resize_crop.png
+TILEMAP_WIDE_META=tilemap_wide.png.meta.txt
+TILE_MAP_TOOL=zoom.py
+TILEMAP_WIDE_VIDEO=tilemap_wide.mp4
+TILEMAP_VIDEO_TOOL=gen_map_video.py
+
+
+$(JOIN_GPS): $(MAX_RAW_FILES)
+	$(GOPRO2GPX) -s -vv $(MAX_RAW_FILES) $(JOIN_GPS)
+
+$(GPS_INTERMEDIATE_JSON): $(JOIN_GPS)
+	$(PROCESS_GPX) --output=$(GPS_INTERMEDIATE_JSON) $(JOIN_GPS)
+
+$(TILEMAP_WIDE_PNG): $(GPS_INTERMEDIATE_JSON)
+	mkdir -p tiles
+	$(TILE_MAP_TOOL) $(GPS_INTERMEDIATE_JSON) --output=$(TILEMAP_WIDE_PNG)
+
+$(TILEMAP_WIDE_VIDEO): $(TILEMAP_WIDE_PNG) $(GPS_INTERMEDIATE_JSON)
+	# XXX need to fix the whole TILEMAP_WIDE_PNG_RESIZE_CROP_PNG mess here
+	$(TILEMAP_VIDEO_TOOL) $(TILEMAP_WIDE_PNG_RESIZE_CROP_PNG) $(TILEMAP_WIDE_META) --output=$(TILEMAP_WIDE_VIDEO) --tstart=$(shell $(READ_ADVANCE_MAX_SECONDS)) #--tfinish=1200
+
+
+#-------------------------------------------------------------------------------------------------------
+TILE_MAP_CLOSE_TOOL=zoom_close.py
+TILE_MAP_CLOSE_PNG=tilemap_close.png
+TILE_MAP_CLOSE_META=tilemap_close.png.meta.txt
+
+$(TILE_MAP_CLOSE_PNG): $(GPS_INTERMEDIATE_JSON)
+	mkdir -p tiles
+	$(TILE_MAP_CLOSE_TOOL) $(GPS_INTERMEDIATE_JSON) --output=$(TILE_MAP_CLOSE_PNG) --zoom=16
+
+TILE_MAP_CLOSE_VIDEO=tilemap_close.avi
+TILE_MAP_CLOSE_VIDEO_TOOL=gen_map_video_close.py
+
+$(TILE_MAP_CLOSE_VIDEO): $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META)
+	$(TILE_MAP_CLOSE_VIDEO_TOOL) $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META) --output=$(TILE_MAP_CLOSE_VIDEO) --tstart=$(shell $(READ_ADVANCE_MAX_SECONDS))
+
+
+
+
+
+#=======================================================================================================
+
 # # [0:a][1:a]amerge=inputs=2[a];
 # # [a][out]concat=n=2
 
