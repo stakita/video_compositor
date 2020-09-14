@@ -444,3 +444,38 @@ $(MERGED_RENDER): merge_sbs.mp4 merged_audio.aac
 
 
 
+MERGED_MAP_OUTPUT_BITRATE = 40000k
+
+
+# combine video into single side-by-side
+# $(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
+merge_sbs.test.mp4:
+	@echo "${BOLD}combine video into single side-by-side${NONE}"
+
+	$(eval left_width := `video_geometry.py --width $(HERO_RENDER)`)
+	$(eval right_width := `video_geometry.py --width $(MAX_RENDER)`)
+	$(eval left_height := `video_geometry.py --height $(HERO_RENDER)`)
+	$(eval right_height := `video_geometry.py --height $(MAX_RENDER)`)
+
+	$(eval output_width := $(shell python -c "print($(left_width) + $(right_width))"))
+	$(eval output_height := $(shell python -c "print(max($(left_height), $(right_height)))"))
+
+	$(eval GEOMETRY := $(output_width)x$(output_height))
+
+	$(FFMEG_BIN) \
+		-y \
+		-i $(HERO_RENDER) \
+		-i $(MAX_RENDER) \
+		-i $(TRACK_MAP_VIDEO) \
+		-filter_complex " \
+			[1:v] pad=width=$(left_width):height=0:x=(ow-iw):y=0:color=black [vid1pad]; \
+			[0:v][vid1pad] vstack [vintleft]; \
+			[vintleft][2:v] hstack [out]; \
+			[0:a][1:a] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
+			" \
+		-map "[out]" \
+		-b:v $(MERGED_MAP_OUTPUT_BITRATE) \
+		-t 00:10:00.000 \
+		$@
+
+
