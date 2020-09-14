@@ -363,7 +363,7 @@ $(TRACK_MAP_VIDEO): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
 
 
 # combine video into single side-by-side
-$(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
+$(MERGED_RENDER): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG)
 	@echo "${BOLD}combine video into single side-by-side${NONE}"
 
 	$(eval left_width := `video_geometry.py --width $(HERO_RENDER)`)
@@ -385,62 +385,13 @@ $(MERGED_SBS): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG) # max.join.mp4
 			[0:v] setpts=PTS-STARTPTS [left]; \
 			[1:v] setpts=PTS-STARTPTS [right]; \
 			[base][left] overlay=shortest=0 [tmp1]; \
-			[tmp1][right] overlay=shortest=0:x=$(left_width) [out] \
+			[tmp1][right] overlay=shortest=0:x=$(left_width) [out]; \
+			[0:a][1:a] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
 			" \
 		-map "[out]" \
 		-b:v $(MERGED_OUTPUT_BITRATE) \
 		$(shell $(READ_TIME_OPTIONS)) \
 		$@
-
-# https://trac.ffmpeg.org/wiki/AudioChannelManipulation
-# filter_audio = " \
-# [0:a] volume=$(VOLUME_HERO) [left]; \
-# [1:a] volume=$(VOLUME_MAX) [right]; \
-# [left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
-# "
-
-# https://trac.ffmpeg.org/wiki/AudioChannelManipulation
-# filter_audio = " \
-# [0:a][1:a]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
-# "
-
-# mix audio tracks
-$(MERGED_AUDIO): $(HERO_AUDIO_FILE) $(MAX_AUDIO_FILE) $(HERO_RENDER) $(MAX_RENDER)
-	@echo "${BOLD}mix audio tracks${NONE}"
-	# Looks like ffmpeg doesn't generate aac timecodes properly. To deal with this, we use the aac files
-	# for audio data, but take the duration from the rendered mp4 files which is a more accurate duration figure
-	DURATION_0=`ffprobe -i $(HERO_RENDER) -show_entries format=duration -v quiet -of csv="p=0"`; \
-	DURATION_1=`ffprobe -i $(MAX_RENDER) -show_entries format=duration -v quiet -of csv="p=0"`; \
-	DURATION_TOTAL=`python -c "print(max($$DURATION_0, $$DURATION_1))"`; \
-	FILTER_AUDIO=" \
-	[0:a] apad=whole_dur=$$DURATION_TOTAL [left]; \
-	[1:a] apad=whole_dur=$$DURATION_TOTAL [right]; \
-	[left][right] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
-	"; \
-	$(FFMEG_BIN) \
-		-y \
-		-i $(HERO_AUDIO_FILE) \
-		-i $(MAX_AUDIO_FILE) \
-		-filter_complex "$$FILTER_AUDIO" \
-		-map "[a]" \
-		-q:a 4 \
-		$(shell $(READ_TIME_OPTIONS)) \
-		$@
-
-# mix audio and video
-$(MERGED_RENDER): merge_sbs.mp4 merged_audio.aac
-	@echo "${BOLD}mix audio and video${NONE}"
-	$(FFMEG_BIN) \
-		-y \
-		-i merge_sbs.mp4 \
-		-i merged_audio.aac \
-		-c copy \
-		-acodec copy \
-		-b:v $(MERGED_OUTPUT_BITRATE) \
-		$(shell $(READ_TIME_OPTIONS)) \
-		$@
-
-
 
 
 
