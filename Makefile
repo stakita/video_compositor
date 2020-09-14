@@ -292,7 +292,7 @@ TILEMAP_WIDE_PNG=tilemap_wide.png
 TILEMAP_WIDE_PNG_RESIZE_CROP_PNG=$(TILEMAP_WIDE_PNG).resize_crop.png
 TILEMAP_WIDE_META=tilemap_wide.png.meta.txt
 TILE_MAP_TOOL=zoom.py
-TILEMAP_WIDE_VIDEO=tilemap_wide.mp4
+TILEMAP_WIDE_VIDEO=tilemap_wide.avi
 TILEMAP_VIDEO_TOOL=gen_map_video.py
 
 
@@ -327,7 +327,20 @@ $(TILE_MAP_CLOSE_VIDEO): $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META)
 	$(TILE_MAP_CLOSE_VIDEO_TOOL) $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META) --output=$(TILE_MAP_CLOSE_VIDEO) --tstart=$(shell $(READ_ADVANCE_MAX_SECONDS))
 
 
+TRACK_MAP_VIDEO=tilemap_render.mp4
+TRACK_MAP_OUTPUT_BITRATE=10000k
 
+$(TRACK_MAP_VIDEO): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
+	$(FFMEG_BIN) \
+		-y \
+		-i $(TILEMAP_WIDE_VIDEO) \
+		-i $(TILE_MAP_CLOSE_VIDEO) \
+		-filter_complex " \
+			[0:v][1:v] vstack \
+			" \
+		-b:v $(MERGED_OUTPUT_BITRATE) \
+		$(shell $(READ_TIME_OPTIONS)) \
+		$@
 
 
 #=======================================================================================================
