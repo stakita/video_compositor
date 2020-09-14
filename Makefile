@@ -33,6 +33,9 @@ MERGED_SBS = merge_sbs.mp4
 MERGED_AUDIO = merged_audio.aac
 MERGED_RENDER = merged_render.mp4
 
+MERGED_MAP_OUTPUT_BITRATE = 40000k
+MERGED_MAP_RENDER=merged_map_render.mp4
+
 # HERO_RAW_FILES := hero5/*.MP4
 # HERO_INTERMEDIATE_FILES = $(patsubst %.MP4, )
 # MAX_RAW_FILES := max/*.LRV
@@ -98,6 +101,7 @@ distclean:
 	rm -f $(MERGED_SBS) $(MERGED_AUDIO)
 	rm -f audio_test
 	rm -rf __pycache__
+	rm -rf tiles
 
 
 DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = ', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
@@ -398,11 +402,8 @@ $(MERGED_RENDER): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG)
 
 #=======================================================================================================
 
-MERGED_MAP_OUTPUT_BITRATE = 40000k
-MERGED_MAP_RENDER=merged_map_render.mp4
-
 # combine video into single side-by-side
-$(MERGED_MAP_RENDER): #$(HERO_RENDER) $(MAX_RENDER) $(TRACK_MAP_RENDER)
+$(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) #$(HERO_RENDER) $(MAX_RENDER)
 	@echo "${BOLD}combine video and map renders into single view${NONE}"
 
 	$(eval left_width := `video_geometry.py --width $(HERO_RENDER)`)
@@ -419,7 +420,7 @@ $(MERGED_MAP_RENDER): #$(HERO_RENDER) $(MAX_RENDER) $(TRACK_MAP_RENDER)
 		-y \
 		-i $(HERO_RENDER) \
 		-i $(MAX_RENDER) \
-		-i $(TRACK_MAP_VIDEO) \
+		-i $(TRACK_MAP_RENDER) \
 		-filter_complex " \
 			[1:v] pad=width=$(left_width):height=0:x=(ow-iw):y=0:color=black [vid1pad]; \
 			[0:v][vid1pad] vstack [vintleft]; \
