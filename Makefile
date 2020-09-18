@@ -36,6 +36,27 @@ MERGED_RENDER = merged_render.mp4
 MERGED_MAP_OUTPUT_BITRATE = 40000k
 MERGED_MAP_RENDER=merged_map_render.mp4
 
+JOIN_GPS=join_gps.gpx
+GPS_INTERMEDIATE_JSON=gps_inter.json
+GOPRO2GPX=gopro2gpx
+PROCESS_GPX=process.rb
+TILEMAP_WIDE_PNG=tilemap_wide.png
+TILEMAP_WIDE_PNG_RESIZE_CROP_PNG=$(TILEMAP_WIDE_PNG).resize_crop.png
+TILEMAP_WIDE_META=tilemap_wide.png.meta.txt
+TILE_MAP_TOOL=zoom.py
+TILEMAP_WIDE_VIDEO=tilemap_wide.avi
+TILEMAP_VIDEO_TOOL=gen_map_video.py
+
+TILE_MAP_CLOSE_TOOL=zoom_close.py
+TILE_MAP_CLOSE_PNG=tilemap_close.png
+TILE_MAP_CLOSE_META=tilemap_close.png.meta.txt
+
+TILE_MAP_CLOSE_VIDEO=tilemap_close.avi
+TILE_MAP_CLOSE_VIDEO_TOOL=gen_map_video_close.py
+
+TRACK_MAP_RENDER=tilemap_render.mp4
+TRACK_MAP_OUTPUT_BITRATE=10000k
+
 # HERO_RAW_FILES := hero5/*.MP4
 # HERO_INTERMEDIATE_FILES = $(patsubst %.MP4, )
 # MAX_RAW_FILES := max/*.LRV
@@ -76,13 +97,15 @@ $(BUILD_PARAMS): $(BUILD_CONFIG) Makefile
 	build_params.py Makefile > $@
 	cp Makefile Makefile.build
 
-map: $(MERGED_MAP_RENDER)
+map: $(TRACK_MAP_RENDER) # $(MERGED_MAP_RENDER)
 
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
 	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
 	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_PLUS_WAVEFORM) $(MAX_RENDER) $(MAX_GENERATED_FILES)
 	rm -f audio_test
+	rm -f tilemap_close.avi tilemap_close.png tilemap_close.png.meta.txt tilemap_close.png.raw.png
+	rm -f tilemap_wide.avi tilemap_wide.png tilemap_wide.png.meta.txt tilemap_wide.png.raw.png tilemap_wide.png.resize_crop.png
 
 clobber: clean
 	@echo "${BOLD}clobber - kill them all${NONE}"
@@ -102,6 +125,9 @@ distclean:
 	rm -f audio_test
 	rm -rf __pycache__
 	rm -rf tiles
+	rm -f tilemap_close.avi tilemap_close.png tilemap_close.png.meta.txt tilemap_close.png.raw.png
+	rm -f tilemap_wide.avi tilemap_wide.png tilemap_wide.png.meta.txt tilemap_wide.png.raw.png tilemap_wide.png.resize_crop.png
+	rm -f gps_inter.json join_gps.gpx.bin join_gps.gpx.kml
 
 
 DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = ', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
@@ -290,17 +316,6 @@ $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(MAX_AUDIO_FILE) $(BUILD_C
 
 #=======================================================================================================
 
-JOIN_GPS=join_gps.gpx
-GPS_INTERMEDIATE_JSON=gps_inter.json
-GOPRO2GPX=gopro2gpx
-PROCESS_GPX=process.rb
-TILEMAP_WIDE_PNG=tilemap_wide.png
-TILEMAP_WIDE_PNG_RESIZE_CROP_PNG=$(TILEMAP_WIDE_PNG).resize_crop.png
-TILEMAP_WIDE_META=tilemap_wide.png.meta.txt
-TILE_MAP_TOOL=zoom.py
-TILEMAP_WIDE_VIDEO=tilemap_wide.avi
-TILEMAP_VIDEO_TOOL=gen_map_video.py
-
 
 $(JOIN_GPS): $(MAX_RAW_FILES)
 	$(GOPRO2GPX) -s -vv $(MAX_RAW_FILES) $(JOIN_GPS)
@@ -309,7 +324,8 @@ $(GPS_INTERMEDIATE_JSON): $(JOIN_GPS)
 	$(PROCESS_GPX) --output=$(GPS_INTERMEDIATE_JSON) $(JOIN_GPS)
 
 $(TILEMAP_WIDE_PNG): $(GPS_INTERMEDIATE_JSON)
-	mkdir -p tiles
+	# mkdir -p tiles
+	ls tiles || ln -s /Users/stakita/Desktop/tiles
 	$(TILE_MAP_TOOL) $(GPS_INTERMEDIATE_JSON) --output=$(TILEMAP_WIDE_PNG)
 
 $(TILEMAP_WIDE_VIDEO): $(TILEMAP_WIDE_PNG) $(GPS_INTERMEDIATE_JSON)
@@ -318,23 +334,16 @@ $(TILEMAP_WIDE_VIDEO): $(TILEMAP_WIDE_PNG) $(GPS_INTERMEDIATE_JSON)
 
 
 #-------------------------------------------------------------------------------------------------------
-TILE_MAP_CLOSE_TOOL=zoom_close.py
-TILE_MAP_CLOSE_PNG=tilemap_close.png
-TILE_MAP_CLOSE_META=tilemap_close.png.meta.txt
+
 
 $(TILE_MAP_CLOSE_PNG): $(GPS_INTERMEDIATE_JSON)
-	mkdir -p tiles
+	ls tiles || ln -s /Users/stakita/Desktop/tiles
 	$(TILE_MAP_CLOSE_TOOL) $(GPS_INTERMEDIATE_JSON) --output=$(TILE_MAP_CLOSE_PNG) --zoom=16
 
-TILE_MAP_CLOSE_VIDEO=tilemap_close.avi
-TILE_MAP_CLOSE_VIDEO_TOOL=gen_map_video_close.py
 
 $(TILE_MAP_CLOSE_VIDEO): $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META)
 	$(TILE_MAP_CLOSE_VIDEO_TOOL) $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META) --output=$(TILE_MAP_CLOSE_VIDEO) --tstart=$(shell $(READ_ADVANCE_MAX_SECONDS))
 
-
-TRACK_MAP_RENDER=tilemap_render.mp4
-TRACK_MAP_OUTPUT_BITRATE=10000k
 
 $(TRACK_MAP_RENDER): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
 	$(FFMEG_BIN) \
