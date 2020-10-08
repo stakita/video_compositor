@@ -425,6 +425,10 @@ $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) #$(HERO_RENDER) $(MAX_RENDER)
 
 	$(eval GEOMETRY := $(output_width)x$(output_height))
 
+	$(eval TIME_MAX_RENDER := $(shell ffprobe -i $(MAX_RENDER) -show_entries format=duration -v quiet -of csv="p=0"))
+	$(eval TIME_HERO_RENDER := $(shell ffprobe -i $(HERO_RENDER) -show_entries format=duration -v quiet -of csv="p=0"))
+	$(eval TIME_FULL := $(shell python -c "print(max($(TIME_MAX_RENDER), $(TIME_HERO_RENDER)))"))
+
 	$(FFMEG_BIN) \
 		-y \
 		-i $(HERO_RENDER) \
@@ -434,11 +438,13 @@ $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) #$(HERO_RENDER) $(MAX_RENDER)
 			[1:v] pad=width=$(left_width):height=0:x=(ow-iw):y=0:color=black [vid1pad]; \
 			[0:v][vid1pad] vstack [vintleft]; \
 			[vintleft][2:v] hstack [out]; \
-			[0:a][1:a] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
+			[0:a] apad [0a_pad]; \
+			[1:a] apad [1a_pad]; \
+			[0a_pad][1a_pad] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
 			" \
 		-map "[out]" \
 		-b:v $(MERGED_MAP_OUTPUT_BITRATE) \
-		$(shell $(READ_TIME_OPTIONS)) \
+		-t $(TIME_FULL) \
 		$@
 
 
