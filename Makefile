@@ -130,7 +130,7 @@ distclean:
 	rm -f gps_inter.json join_gps.gpx.bin join_gps.gpx.kml
 
 
-DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = ', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
+DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = '' \#', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
 
 $(BUILD_CONFIG):
 	@echo "${BOLD}generate build config file${NONE}"
