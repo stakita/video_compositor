@@ -330,7 +330,7 @@ $(TILEMAP_WIDE_PNG): $(GPS_INTERMEDIATE_JSON)
 
 $(TILEMAP_WIDE_VIDEO): $(TILEMAP_WIDE_PNG) $(GPS_INTERMEDIATE_JSON)
 	# XXX need to fix the whole TILEMAP_WIDE_PNG_RESIZE_CROP_PNG mess here
-	$(TILEMAP_VIDEO_TOOL) $(TILEMAP_WIDE_PNG_RESIZE_CROP_PNG) $(TILEMAP_WIDE_META) --output=$(TILEMAP_WIDE_VIDEO) --tstart=$(shell $(READ_ADVANCE_MAX_SECONDS)) #--tfinish=1200
+	$(TILEMAP_VIDEO_TOOL) $(TILEMAP_WIDE_PNG_RESIZE_CROP_PNG) $(TILEMAP_WIDE_META) --output=$(TILEMAP_WIDE_VIDEO)
 
 
 #-------------------------------------------------------------------------------------------------------
@@ -342,13 +342,19 @@ $(TILE_MAP_CLOSE_PNG): $(GPS_INTERMEDIATE_JSON)
 
 
 $(TILE_MAP_CLOSE_VIDEO): $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META)
-	$(TILE_MAP_CLOSE_VIDEO_TOOL) $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META) --output=$(TILE_MAP_CLOSE_VIDEO) --tstart=$(shell $(READ_ADVANCE_MAX_SECONDS))
+	$(TILE_MAP_CLOSE_VIDEO_TOOL) $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META) --output=$(TILE_MAP_CLOSE_VIDEO)
 
 
 $(TRACK_MAP_RENDER): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
+	MAX_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
+	TILEMAP_CLOSE_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(TILE_MAP_CLOSE_VIDEO)`; \
+	START_PAD=`python -c "print(round($$MAX_DURATION_SECONDS - $$TILEMAP_CLOSE_DURATION_SECONDS - $(shell $(READ_ADVANCE_MAX_SECONDS)), 2))"`; \
+	echo start_pad: $$START_PAD; \
 	$(FFMEG_BIN) \
 		-y \
+		-itsoffset $$START_PAD \
 		-i $(TILEMAP_WIDE_VIDEO) \
+		-itsoffset $$START_PAD \
 		-i $(TILE_MAP_CLOSE_VIDEO) \
 		-filter_complex " \
 			[0:v][1:v] vstack \
