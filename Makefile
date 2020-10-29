@@ -97,7 +97,7 @@ $(BUILD_PARAMS): $(BUILD_CONFIG) Makefile
 	build_params.py Makefile > $@
 	cp Makefile Makefile.build
 
-map: $(TRACK_MAP_RENDER) # $(MERGED_MAP_RENDER)
+map: $(TRACK_MAP_RENDER) $(MERGED_MAP_RENDER)
 
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
