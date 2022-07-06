@@ -160,7 +160,7 @@ audio_test: $(BUILD_PARAMS)
 
 #=======================================================================================================
 
-# generate ffmpeg join config for hero files
+# generate ffmpeg join config for hero files - needed by ffmpeg concat method
 $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
@@ -240,9 +240,14 @@ $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES)
 	echo "$$FILE_LIST" > $@
 
 # join max files
+# mapping:
+#    0:v - all video
+#    0:a - all audio
+#    0:3 - the "GoPro MET" temmetry channel including GPS data
+# NOTE: This is hard coded at present, but we can query this with ffprobe if necessary!
 $(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
 	@echo "${BOLD}concat max files${NONE}"
-	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
+	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@
 
 # map max files to hemispherical
 $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
