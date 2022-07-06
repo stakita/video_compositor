@@ -14,14 +14,16 @@ Options:
   --channels=<CHANNELS>     Set mono(1) or stereo(2) [default: 2]
 '''
 import sys
+
 try:
     from docopt import docopt
+    from sksound.sounds import Sound
+    import matplotlib.pyplot as plt
 except ImportError as e:
-    sys.stderr.write('Error: %s\nTry:\n    pip3 install --user docopt\n' % e)
+    installs = ['docopt', 'scikit-sound', 'matplotlib']
+    sys.stderr.write('Error: %s\nTry:\n    pip install --user %s\n' % (e, ' '.join(installs)))
     sys.exit(1)
 
-from sksound.sounds import Sound
-import matplotlib.pyplot as plt
 
 def gen_wave_plot(input_file, output_file, height, width, channels):
     mysound = Sound(input_file)

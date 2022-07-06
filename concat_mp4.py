@@ -19,14 +19,10 @@ logging.basicConfig(level=logging.INFO,
 
 try:
     import sh
-except ImportError as e:
-    sys.stderr.write('Error: %s\nTry:\n    pip install --user sh\n' % e)
-    sys.exit(1)
-
-try:
     from docopt import docopt
 except ImportError as e:
-    sys.stderr.write('Error: %s\nTry:\n    pip install --user docopt\n' % e)
+    installs = ['sh', 'docopt']
+    sys.stderr.write('Error: %s\nTry:\n    pip install --user %s\n' % (e, ' '.join(installs)))
     sys.exit(1)
 
 

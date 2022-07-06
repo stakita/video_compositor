@@ -17,16 +17,12 @@ import copy
 
 try:
     import cv2
-except ImportError as e:
-    sys.stderr.write('Error: %s\nTry:\n    pip install opencv-python\n' % e)
-    sys.exit(1)
-
-
-try:
     from docopt import docopt
 except ImportError as e:
-    sys.stderr.write('Error: %s\nTry:\n    pip3 install --user docopt\n' % e)
+    installs = ['opencv-python', 'docopt']
+    sys.stderr.write('Error: %s\nTry:\n    pip install --user %s\n' % (e, ' '.join(installs)))
     sys.exit(1)
+
 
 def generate_waveform_video(background_image, total_seconds, output_file, fps):
     image = cv2.imread(background_image)
