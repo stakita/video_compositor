@@ -329,8 +329,8 @@ $(GPS_INTERMEDIATE_JSON): $(JOIN_GPS)
 	$(PROCESS_GPX) --output=$@ $<
 
 $(TILEMAP_WIDE_PNG): $(GPS_INTERMEDIATE_JSON)
-	# mkdir -p tiles
-	ls tiles || ln -s /Users/stakita/Desktop/tiles
+	@# Create link to a tile cache directory
+	ls tiles || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
 	$(TILE_MAP_TOOL) $(GPS_INTERMEDIATE_JSON) --output=$(TILEMAP_WIDE_PNG)
 
 $(TILEMAP_WIDE_VIDEO): $(TILEMAP_WIDE_PNG) $(GPS_INTERMEDIATE_JSON)
