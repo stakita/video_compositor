@@ -16,7 +16,7 @@ import numpy as np
 import copy
 
 try:
-    import cv2
+    from cv2 import cv2
     from docopt import docopt
 except ImportError as e:
     installs = ['opencv-python', 'docopt']
