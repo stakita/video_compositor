@@ -8,7 +8,6 @@ BUILD_MAKEFILE = Makefile.build
 HERO_RAW_FILES := $(wildcard hero5/*.MP4)
 HERO_JOIN_CONFIG = hero_join_config.txt
 HERO_JOIN_FILE = hero.join.mp4
-HERO_AUDIO_FILE = hero.join.aac
 HERO_WAVEFORM_FILE = hero.waveform.mp4
 HERO_RENDER = hero_render.mp4
 HERO_OUTPUT_BITRATE = 30000k
@@ -19,7 +18,6 @@ MAX_RAW_FILES := $(wildcard max/*.LRV)
 MAX_JOIN_CONFIG = max_join_config.txt
 MAX_JOIN_FISHEYE_FILE = max.join.fisheye.mp4
 MAX_JOIN_FILE = max.join.mp4
-MAX_AUDIO_FILE = max.join.aac
 MAX_WAVEFORM_FILE = max.waveform.mp4
 MAX_RENDER = max_render.mp4
 MAX_OUTPUT_BITRATE = 30000k
@@ -27,8 +25,6 @@ MAX_SCALING_FACTOR = 1.0
 MAX_GENERATED_FILES = max.join.wav max.waveform.mp4.background.png
 
 MERGED_OUTPUT_BITRATE = 30000k
-MERGED_SBS = merge_sbs.mp4
-MERGED_AUDIO = merged_audio.aac
 MERGED_RENDER = merged_render.mp4
 
 MERGED_MAP_OUTPUT_BITRATE = 40000k
@@ -48,16 +44,13 @@ TRACK_MAP_CHASE_VIDEO_TOOL=create_chase_video
 TRACK_MAP_CHASE_ZOOM_FACTOR=16
 TRACK_MAP_CHASE_VIDEO=map_chase.mp4
 
+# combined map render video
 TRACK_MAP_RENDER=track_map_render.mp4
 TRACK_MAP_OUTPUT_BITRATE=10000k
 
-TRACK_MAP_GENERATED_FILES = track_gps.kpx map_overview.mp4.background.png
+TRACK_MAP_GENERATED_FILES = track_gps.kpx track_gps.bin map_overview.mp4.background.png
 TRACK_MAP_CACHED_FILES = $(wildcard $(TRACK_MAP_CACHE_DIR)/*.png)
 
-# HERO_RAW_FILES := hero5/*.MP4
-# TIME_OPTIONS = -t 00:05:00.000
-# If apad is enabled in the audio filter (different length video), you need to set a bounding time to complete:
-# TIME_OPTIONS = -t 3433.592000
 FFMEG_BIN = ffmpeg
 
 READ_TIME_OPTIONS = python -c "import config; print(config.TIME_OPTIONS)"
@@ -81,13 +74,15 @@ BOLD=\033[1m
 UNDERLINE=\033[4m
 
 
-all: $(BUILD_CONFIG)
+all: $(BUILD_CONFIG) merged map
+
+config: $(BUILD_CONFIG)
 
 # Side by side video
 merged: $(MERGED_RENDER)
 
 # Full merged map
-merged_map: $(MERGED_MAP_RENDER)
+map: $(MERGED_MAP_RENDER)
 
 .PHONY: all clean clobber distclean
 
@@ -95,38 +90,26 @@ $(BUILD_MAKEFILE): Makefile
 	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
 	cp Makefile Makefile.build
 
-map: $(TRACK_MAP_RENDER) $(MERGED_MAP_RENDER)
-
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
-	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
-	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_RENDER) $(MAX_GENERATED_FILES)
-	rm -f audio_test
-	rm -f tilemap_close.avi tilemap_close.png tilemap_close.png.meta.txt tilemap_close.png.raw.png
-	rm -f tilemap_wide.avi tilemap_wide.png tilemap_wide.png.meta.txt tilemap_wide.png.raw.png tilemap_wide.png.resize_crop.png
+	rm -f $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
+	rm -f $(MAX_WAVEFORM_FILE) $(MAX_RENDER) $(MAX_GENERATED_FILES)
+	rm -f $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(TRACK_MAP_RENDER) $(TRACK_GPX) $(TRACK_MAP_GENERATED_FILES)
+	rm -rf __pycache__
 
 clobber: clean
 	@echo "${BOLD}clobber - kill them all${NONE}"
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
-	rm -f $(MERGED_SBS) $(MERGED_AUDIO) $(MERGED_RENDER)
-	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
 	rm -f $(TRACK_MAP_CACHED_FILES)
-	rm -rf __pycache__
+	rm -f $(MERGED_RENDER) $(MERGED_MAP_RENDER)
+	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
 
-distclean:
-	@echo "${BOLD}distclean - leave final file and config${NONE}"
-	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)
+distclean: clean
+	@echo "${BOLD}distclean - leave final files and config${NONE}"
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
-	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_GENERATED_FILES)
-	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FISHEYE_FILE) $(MAX_JOIN_FILE)
-	rm -f $(MERGED_SBS) $(MERGED_AUDIO)
-	rm -f audio_test
-	rm -rf __pycache__
-	rm -rf tiles
-	rm -f tilemap_close.avi tilemap_close.png tilemap_close.png.meta.txt tilemap_close.png.raw.png
-	rm -f tilemap_wide.avi tilemap_wide.png tilemap_wide.png.meta.txt tilemap_wide.png.raw.png tilemap_wide.png.resize_crop.png
-	rm -f gps_inter.json join_gps.gpx.bin join_gps.gpx.kml
+	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
+	rm -f $(TRACK_MAP_CACHED_FILES)
 
 
 DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = '' \#', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
