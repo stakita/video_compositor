@@ -24,6 +24,10 @@ The output layout shown in this diagram:
 
 ![Frame layout](./docs/frame_layout.png)
 
+And example from real data:
+
+![](./docs/demo_snapshot.png)
+
 ### Why composite the data?
 
 These videos are review files from training sessions which means they tend to be rendered and then archived for review at a later date. Rather than building out software to do the composition of channels from extracted metadata at playback time, it's arguably easier to compose the videos once completely, then use any off the shelf video player for review without any other software dependencies.
@@ -69,6 +73,8 @@ There are two custom tools required for running this pipeline:
 - [**ffmpeg**](https://ffmpeg.org/)
   - Most of the video transformations are done with ffmpeg
   - Insanely complicated and insanely powerful
+- [**gopro2gpx**](https://github.com/juanmcasillas/gopro2gpx)
+  - Used to extract GPX telemetry data from GoPro video files
 - [**jq**](https://stedolan.github.io/jq/)
   - Getting output from ffmpeg can be challenging, but it supports json output, so jq is our friend
 - python3
@@ -82,29 +88,71 @@ The build process starts with the raw camera files and implements the following 
 graph TD
 
 hero_raw_files --> hero_join_config
-hero_raw_files --> hero_join_file
-hero_join_config --> hero_join_file
+hero_raw_files -->|ffmpeg| hero_join_file
+hero_join_config -->|ffmpeg| hero_join_file
 
-hero_join_file --> hero_waveform_video
-hero_waveform_video --> hero_render
+hero_join_file -->|waveform_video_generator| hero_waveform_video
+hero_waveform_video -->|ffmpeg| hero_render
 
-hero_join_file --> hero_render
+hero_join_file -->|ffmpeg| hero_render
 
 max_raw_files --> max_join_config
-max_raw_files --> max_join_fisheye
-max_join_config --> max_join_fisheye
-max_join_fisheye --> max_join_file
-max_join_fisheye --> max_gpx_data
-max_join_file --> max_waveform_video
-max_waveform_video --> max_render
-max_join_file --> max_render
+max_raw_files -->|ffmpeg| max_join_fisheye
+max_join_config -->|ffmpeg| max_join_fisheye
+max_join_fisheye -->|ffmpeg| max_join_file
+max_join_fisheye -->|gopro2gpx| max_gpx_data
+max_join_file -->|waveform_video_generator| max_waveform_video
+max_waveform_video -->|ffmpeg| max_render
+max_join_file -->|ffmpeg| max_render
 
-max_gpx_data --> track_overview_video
-max_gpx_data --> track_chase_video
-track_overview_video --> track_map_render
-track_chase_video --> track_map_render
+max_gpx_data -->|openmaps_tiler| track_overview_video
+max_gpx_data -->|openmaps_tiler| track_chase_video
+track_overview_video -->|ffmpeg| track_map_render
+track_chase_video -->|ffmpeg| track_map_render
 
-hero_render --> merged_map_render
-max_render --> merged_map_render
-track_map_render --> merged_map_render
+hero_render -->|ffmpeg| merged_map_render
+max_render -->|ffmpeg| merged_map_render
+track_map_render -->|ffmpeg| merged_map_render
 ```
+
+## Usage
+
+The makefile is intended to be symbolic linked into a target directory where the raw videos are stored. The build expects the following filesystem hierarchy for processing the files:
+
+```
+.
+├── Makefile -> [...path-to-repository...]/Makefile (symbolic link)
+├── hero5
+│   ├── GOPR0000.LRV
+│   ├── GOPR0000.MP4
+│   ├── GOPR1000.LRV
+│   ├── GOPR1000.MP4
+│   └── ...
+└── max
+    ├── GS010082.360
+    ├── GS010082.LRV
+    ├── GS020082.360
+    ├── GS020082.LRV
+    └── ...
+```
+
+Once the `Makefile` symbolic link is in place, make can be invoked like so:
+
+```
+# build target for the full merged map render
+make merged_map
+```
+
+Other convenience targets that exist:
+
+* `config` - generate the config file for adding in synchronization offsets prior to the full build
+
+* `merged` - build a side by side render without the maps view
+
+* `merged_map` - build the full render (both videos, waveforms, and map views)
+
+* `clean` - clean out generated files except the initial join files (combined raw file for each camera)
+
+* `distclean` - clean out generated files leaving just the final artifact videos and configuration used
+
+* `clobber` - clean everything
