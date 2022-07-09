@@ -14,9 +14,9 @@ The goal is to take video from two GoPro cameras and combine them. One of the ca
 
 * Max audio waveform - represented as a 2-dimensional waveform (with time marker)
 
-* Overview map - represenation of the GPS data indicating current position as well as overal track (complete track is always visible)
+* Overview map - representation of the GPS data indicating current position as well as overall track (complete track is always visible)
 
-* Chase map - represesentation of the GPS data zoomed in (to show nearby map features) with current position in the center
+* Chase map - representation of the GPS data zoomed in (to show nearby map features) with current position in the center
 
 Time synchronization of the two video is done by configuration data to allow for video, audio and map data to be synchronized.
 
@@ -38,7 +38,7 @@ Source data from training sessions are in the form of video output from two GoPr
 
 ### GoPro Hero 5
 
-This camera is configured as a standard action camera capturing forward action. This camera has it's own audio stream which needs to be mixed into the final output (at a given volume)
+This camera is configured as a standard action camera capturing forward action. This camera has its own audio stream which needs to be mixed into the final output (at a given volume)
 
 ### GoPro Max 360
 
@@ -46,11 +46,11 @@ This camera is a 360 camera which captures raw video in dual fisheye output (I'm
 
 ## Dependencies
 
-This project is mostly a build script and most of the work is done dependent tools, some are custom tools implementing this pipeline. Others are open source.
+This project is mostly a build script and most of the work is done in dependent tools, some of which are custom tools implementing the pipeline. Others are open source.
 
 ### Custom tools
 
-There are two custom tools required for running this pipelin:
+There are two custom tools required for running this pipeline:
 
 * [**openmaps_tiler**](https://github.com/stakita/openmaps_tiler)
   
@@ -70,7 +70,7 @@ There are two custom tools required for running this pipelin:
   - Most of the video transformations are done with ffmpeg
   - Insanely complicated and insanely powerful
 - [**jq**](https://stedolan.github.io/jq/)
-  - Getting output from ffmpeg can be challenging, but it support json output, so jq is our friend
+  - Getting output from ffmpeg can be challenging, but it supports json output, so jq is our friend
 - python3
   - For lots of little things in the build pipeline
 
