@@ -45,6 +45,6 @@ Tool to get the geometry parameters of a video file. Probably redundant.
 
 ## Dependencies
 
-* ffmpeg
+* ffmpeg (> 4.3)
 * python3
-* openmpas_tiler
+* openmaps_tiler

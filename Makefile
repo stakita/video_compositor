@@ -58,7 +58,7 @@ TRACK_MAP_CACHED_FILES = $(wildcard $(TRACK_MAP_CACHE_DIR)/*.png)
 # TIME_OPTIONS = -t 00:05:00.000
 # If apad is enabled in the audio filter (different length video), you need to set a bounding time to complete:
 # TIME_OPTIONS = -t 3433.592000
-FFMEG_BIN = ~/bin/ffmpeg
+FFMEG_BIN = ffmpeg
 
 READ_TIME_OPTIONS = python -c "import config; print(config.TIME_OPTIONS)"
 READ_ADVANCE_MAX_SECONDS = python -c "import config; print(config.ADVANCE_MAX_SECONDS)"
