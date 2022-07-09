@@ -32,7 +32,6 @@ def main(args):
     filename = args['<file>']
     display_width = args['--width']
     display_height = args['--height']
-    display_both = display_width is None and display_height is None
 
     results = ffmpeg.probe(filename)
 
