@@ -9,27 +9,22 @@ HERO_RAW_FILES := $(wildcard hero5/*.MP4)
 HERO_JOIN_CONFIG = hero_join_config.txt
 HERO_JOIN_FILE = hero.join.mp4
 HERO_AUDIO_FILE = hero.join.aac
-HERO_WAVEFORM_PLOT = hero.wavform.plot.png
-HERO_WAVEFORM_FILE = hero.wavform.avi
-HERO_PLUS_WAVEFORM = hero_plus_waveform.mp4
+HERO_WAVEFORM_FILE = hero.waveform.mp4
 HERO_RENDER = hero_render.mp4
-#HERO_OUTPUT_BITRATE = 30000k
-HERO_OUTPUT_BITRATE = 3000k
+HERO_OUTPUT_BITRATE = 30000k
 HERO_SCALING_FACTOR = 0.75
-HERO_GENERATED_FILES = hero.join.wav
+HERO_GENERATED_FILES = hero.join.wav hero.waveform.mp4.background.png
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
 MAX_JOIN_CONFIG = max_join_config.txt
 MAX_JOIN_FISHEYE_FILE = max.join.fisheye.mp4
 MAX_JOIN_FILE = max.join.mp4
 MAX_AUDIO_FILE = max.join.aac
-MAX_WAVEFORM_PLOT = max.wavform.plot.png
-MAX_WAVEFORM_FILE = max.wavform.avi
-MAX_PLUS_WAVEFORM = max_plus_waveform.mp4
+MAX_WAVEFORM_FILE = max.waveform.mp4
 MAX_RENDER = max_render.mp4
 MAX_OUTPUT_BITRATE = 30000k
 MAX_SCALING_FACTOR = 1.0
-MAX_GENERATED_FILES = max.join.wav
+MAX_GENERATED_FILES = max.join.wav max.waveform.mp4.background.png
 
 MERGED_OUTPUT_BITRATE = 30000k
 MERGED_SBS = merge_sbs.mp4
@@ -37,10 +32,14 @@ MERGED_AUDIO = merged_audio.aac
 MERGED_RENDER = merged_render.mp4
 
 MERGED_MAP_OUTPUT_BITRATE = 40000k
-MERGED_MAP_RENDER=merged_map_render.mp4
+MERGED_MAP_RENDER = merged_map_render.mp4
 
-TRACK_GPX=track_gps.gpx
-GOPRO2GPX_TOOL=gopro2gpx
+WAVEFORM_VIDEO_TOOL = create_waveform_video.py
+
+TRACK_GPX = track_gps.gpx
+GOPRO2GPX_TOOL = gopro2gpx
+
+TRACK_MAP_CACHE_DIR = tiles
 
 TRACK_MAP_OVERVIEW_VIDEO_TOOL=create_overview_video
 TRACK_MAP_OVERVIEW_VIDEO=map_overview.mp4
@@ -51,6 +50,9 @@ TRACK_MAP_CHASE_VIDEO=map_chase.mp4
 
 TRACK_MAP_RENDER=track_map_render.mp4
 TRACK_MAP_OUTPUT_BITRATE=10000k
+
+TRACK_MAP_GENERATED_FILES = track_gps.kpx map_overview.mp4.background.png
+TRACK_MAP_CACHED_FILES = $(wildcard $(TRACK_MAP_CACHE_DIR)/*.png)
 
 # HERO_RAW_FILES := hero5/*.MP4
 # TIME_OPTIONS = -t 00:05:00.000
@@ -93,8 +95,8 @@ map: $(TRACK_MAP_RENDER) $(MERGED_MAP_RENDER)
 
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
-	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
-	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_PLUS_WAVEFORM) $(MAX_RENDER) $(MAX_GENERATED_FILES)
+	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
+	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_RENDER) $(MAX_GENERATED_FILES)
 	rm -f audio_test
 	rm -f tilemap_close.avi tilemap_close.png tilemap_close.png.meta.txt tilemap_close.png.raw.png
 	rm -f tilemap_wide.avi tilemap_wide.png tilemap_wide.png.meta.txt tilemap_wide.png.raw.png tilemap_wide.png.resize_crop.png
@@ -105,13 +107,14 @@ clobber: clean
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
 	rm -f $(MERGED_SBS) $(MERGED_AUDIO) $(MERGED_RENDER)
 	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
+	rm -f $(TRACK_MAP_CACHED_FILES)
 	rm -rf __pycache__
 
 distclean:
 	@echo "${BOLD}distclean - leave final file and config${NONE}"
-	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_PLUS_WAVEFORM) $(HERO_GENERATED_FILES)
+	rm -f $(HERO_AUDIO_FILE) $(HERO_WAVEFORM_PLOT) $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
-	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_PLUS_WAVEFORM) $(MAX_GENERATED_FILES)
+	rm -f $(MAX_AUDIO_FILE) $(MAX_WAVEFORM_PLOT) $(MAX_WAVEFORM_FILE) $(MAX_GENERATED_FILES)
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FISHEYE_FILE) $(MAX_JOIN_FILE)
 	rm -f $(MERGED_SBS) $(MERGED_AUDIO)
 	rm -f audio_test
@@ -174,19 +177,20 @@ $(HERO_AUDIO_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 		"volume=$(shell $(READ_VOLUME_HERO))$(shell $(READ_HERO_AUDIO_OPTS))" \
 		$@
 
-# generate waveform plot
-$(HERO_WAVEFORM_PLOT): $(HERO_JOIN_FILE) $(HERO_AUDIO_FILE)
-	@echo "${BOLD}generate hero waveform plot${NONE}"
-	HERO_JOIN_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
-	HERO_SCALED_WIDTH=`python -c "print(int($(HERO_SCALING_FACTOR) * $$HERO_JOIN_WIDTH))"` ; \
-	gen_wave_plot.py --height=100 --channels=1 --width=$$HERO_SCALED_WIDTH $(HERO_AUDIO_FILE) --output=$@
-
 # generate waveform file
-$(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_PLOT)
+$(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_AUDIO_FILE)
 	@echo "${BOLD}generate waveform progress video${NONE}"
+	MAX_JOIN_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
+	MAX_SCALED_WIDTH=`python -c "print(int($(HERO_SCALING_FACTOR) * $$MAX_JOIN_WIDTH))"` ; \
 	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(HERO_JOIN_FILE)`; \
 	DURATION_TRIMMED=`python -c "print($$DURATION_SECONDS - $(shell $(READ_ADVANCE_HERO_SECONDS)))"`; \
-	gen_waveform_slider.py $(HERO_WAVEFORM_PLOT) $$DURATION_SECONDS --output=$(HERO_WAVEFORM_FILE)
+	$(WAVEFORM_VIDEO_TOOL) \
+		$(HERO_AUDIO_FILE) \
+		$$DURATION_TRIMMED \
+		--output=$(HERO_WAVEFORM_FILE) \
+		--width=$$MAX_SCALED_WIDTH \
+		--height=100 \
+		--channels=1 
 
 # combine video with waveform video
 $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(HERO_AUDIO_FILE) $(BUILD_CONFIG)
@@ -209,14 +213,13 @@ $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(HERO_AUDIO_FILE) $(BUI
 		-ss $(shell $(READ_ADVANCE_HERO)) \
 		-i $(HERO_JOIN_FILE) \
 		-i $(HERO_WAVEFORM_FILE) \
-		-i $(HERO_AUDIO_FILE) \
 		-filter_complex " \
 			nullsrc=size=$$GEOMETRY [base]; \
 			[0:v] setpts=PTS-STARTPTS,scale=$$TOP_GEOMETRY [top]; \
 			[1:v] setpts=PTS-STARTPTS [bottom]; \
 			[base][top] overlay=shortest=1 [tmp1]; \
 			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out]; \
-			[2:a]volume=1.0" \
+			[0:a]volume=1.0" \
 		-map "[out]" \
 		-b:v $(HERO_OUTPUT_BITRATE) \
 		$(shell $(READ_TIME_OPTIONS)) \
@@ -236,7 +239,8 @@ $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES)
 #    0:v - all video
 #    0:a - all audio
 #    0:3 - the "GoPro MET" temmetry channel including GPS data
-# NOTE: This is hard coded at present, but we can query this with ffprobe if necessary!
+# NOTE: The reference to the telemetry is hard coded current, but we can query this with ffprobe if necessary
+#       to make it dynamic
 $(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
 	@echo "${BOLD}concat max files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@
@@ -262,19 +266,20 @@ $(MAX_AUDIO_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
 		-filter:a "volume=$(shell $(READ_VOLUME_MAX))" \
 		$@
 
-# generate waveform plot
-$(MAX_WAVEFORM_PLOT): $(MAX_JOIN_FILE) $(MAX_AUDIO_FILE)
-	@echo "${BOLD}generate max waveform plot${NONE}"
+# generate waveform file
+$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(MAX_AUDIO_FILE)
+	@echo "${BOLD}generate waveform progress video${NONE}"
 	MAX_JOIN_WIDTH=`video_geometry.py --width $(MAX_JOIN_FILE)`; \
 	MAX_SCALED_WIDTH=`python -c "print(int($(MAX_SCALING_FACTOR) * $$MAX_JOIN_WIDTH))"` ; \
-	gen_wave_plot.py --height=100 --channels=1 --width=$$MAX_SCALED_WIDTH $(MAX_AUDIO_FILE) --output=$@
-
-# generate waveform file
-$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_PLOT)
-	@echo "${BOLD}generate waveform progress video${NONE}"
 	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
 	DURATION_TRIMMED=`python -c "print($$DURATION_SECONDS - $(shell $(READ_ADVANCE_MAX_SECONDS)))"`; \
-	gen_waveform_slider.py $(MAX_WAVEFORM_PLOT) $$DURATION_TRIMMED --output=$(MAX_WAVEFORM_FILE)
+	$(WAVEFORM_VIDEO_TOOL) \
+		$(MAX_AUDIO_FILE) \
+		$$DURATION_TRIMMED \
+		--output=$(MAX_WAVEFORM_FILE) \
+		--width=$$MAX_SCALED_WIDTH \
+		--height=100 \
+		--channels=1 
 
 # combine video with waveform video
 $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(MAX_AUDIO_FILE) $(BUILD_CONFIG)
@@ -297,14 +302,13 @@ $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(MAX_AUDIO_FILE) $(BUILD_C
 		-ss $(shell $(READ_ADVANCE_MAX)) \
 		-i $(MAX_JOIN_FILE) \
 		-i $(MAX_WAVEFORM_FILE) \
-		-i $(MAX_AUDIO_FILE) \
 		-filter_complex " \
 			nullsrc=size=$$GEOMETRY [base]; \
 			[0:v] setpts=PTS-STARTPTS,scale=$$TOP_GEOMETRY [top]; \
 			[1:v] setpts=PTS-STARTPTS [bottom]; \
 			[base][top] overlay=shortest=1 [tmp1]; \
 			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out]; \
-			[2:a]volume=1.0" \
+			[0:a]volume=1.0" \
 		-map "[out]" \
 		-b:v $(MAX_OUTPUT_BITRATE) \
 		$(shell $(READ_TIME_OPTIONS)) \
@@ -320,7 +324,7 @@ $(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
 
 $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
 	@# Create link to a tile cache directory
-	ls tiles || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
+	ls $(TRACK_MAP_CACHE_DIR) || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
 	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles
 
 
@@ -329,7 +333,7 @@ $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
 
 $(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX)
 	@# Create link to a tile cache directory
-	ls tiles || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
+	ls $(TRACK_MAP_CACHE_DIR) || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
 	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@
 
 
