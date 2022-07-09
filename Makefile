@@ -156,7 +156,7 @@ $(BUILD_CONFIG):
 #=======================================================================================================
 
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
-$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
+$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -166,26 +166,15 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
 
-# extract audio track - needed for generating audio waveform video
-$(HERO_AUDIO_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}extract time offset hero audio track${NONE}"
-	$(FFMEG_BIN) \
-		-y \
-		-ss $(shell $(READ_ADVANCE_HERO)) \
-		-i $(HERO_JOIN_FILE) \
-		-filter_complex \
-		"volume=$(shell $(READ_VOLUME_HERO))$(shell $(READ_HERO_AUDIO_OPTS))" \
-		$@
-
 # generate waveform file
-$(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_AUDIO_FILE)
+$(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
 	@echo "${BOLD}generate waveform progress video${NONE}"
 	MAX_JOIN_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
 	MAX_SCALED_WIDTH=`python -c "print(int($(HERO_SCALING_FACTOR) * $$MAX_JOIN_WIDTH))"` ; \
 	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(HERO_JOIN_FILE)`; \
 	DURATION_TRIMMED=`python -c "print($$DURATION_SECONDS - $(shell $(READ_ADVANCE_HERO_SECONDS)))"`; \
 	$(WAVEFORM_VIDEO_TOOL) \
-		$(HERO_AUDIO_FILE) \
+		$(HERO_JOIN_FILE) \
 		$$DURATION_TRIMMED \
 		--output=$(HERO_WAVEFORM_FILE) \
 		--width=$$MAX_SCALED_WIDTH \
@@ -193,7 +182,7 @@ $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(HERO_AUDIO_FILE)
 		--channels=1 
 
 # combine video with waveform video
-$(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(HERO_AUDIO_FILE) $(BUILD_CONFIG)
+$(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}combine hero and waveform video vertically and audio${NONE}"
 
 	TOP_HEIGHT=`video_geometry.py --height $(HERO_JOIN_FILE)`; \
@@ -229,7 +218,7 @@ $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(HERO_AUDIO_FILE) $(BUI
 #=======================================================================================================
 
 # generate ffmpeg join config for max files
-$(MAX_JOIN_CONFIG): $(MAX_RAW_FILES)
+$(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG)
 	@echo "${BOLD}generate max ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(MAX_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -256,25 +245,15 @@ $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
 		-c:a copy \
 		$@
 
-# mix audio track
-$(MAX_AUDIO_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}extract time offset max audio track${NONE}"
-	$(FFMEG_BIN) \
-		-y \
-		-ss $(shell $(READ_ADVANCE_MAX)) \
-		-i $(MAX_JOIN_FILE) \
-		-filter:a "volume=$(shell $(READ_VOLUME_MAX))" \
-		$@
-
 # generate waveform file
-$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(MAX_AUDIO_FILE)
+$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
 	@echo "${BOLD}generate waveform progress video${NONE}"
 	MAX_JOIN_WIDTH=`video_geometry.py --width $(MAX_JOIN_FILE)`; \
 	MAX_SCALED_WIDTH=`python -c "print(int($(MAX_SCALING_FACTOR) * $$MAX_JOIN_WIDTH))"` ; \
 	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
 	DURATION_TRIMMED=`python -c "print($$DURATION_SECONDS - $(shell $(READ_ADVANCE_MAX_SECONDS)))"`; \
 	$(WAVEFORM_VIDEO_TOOL) \
-		$(MAX_AUDIO_FILE) \
+		$(MAX_JOIN_FILE) \
 		$$DURATION_TRIMMED \
 		--output=$(MAX_WAVEFORM_FILE) \
 		--width=$$MAX_SCALED_WIDTH \
@@ -282,7 +261,7 @@ $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(MAX_AUDIO_FILE)
 		--channels=1 
 
 # combine video with waveform video
-$(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(MAX_AUDIO_FILE) $(BUILD_CONFIG)
+$(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
 
 	TOP_HEIGHT=`video_geometry.py --height $(MAX_JOIN_FILE)`; \
