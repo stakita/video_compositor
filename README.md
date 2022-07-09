@@ -42,3 +42,9 @@ Intended to provide positional progress indication across a background image (li
 ## video_geometry.py
 
 Tool to get the geometry parameters of a video file. Probably redundant.
+
+## Dependencies
+
+* ffmpeg
+* python3
+* openmpas_tiler
