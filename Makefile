@@ -38,18 +38,19 @@ MERGED_MAP_RENDER=merged_map_render.mp4
 
 TRACK_GPX=track_gps.gpx
 GOPRO2GPX_TOOL=gopro2gpx
-CREATE_OVERVIEW_VIDEO_TOOL=create_overview_video
+
+MAP_OVERVIEW_VIDEO_TOOL=create_overview_video
 MAP_OVERVIEW_VIDEO=map_overview.mp4
 
-# TILEMAP_WIDE_VIDEO=tilemap_wide.avi
-# TILEMAP_VIDEO_TOOL=gen_map_video.py
+MAP_CHASE_VIDEO_TOOL=create_chase_video
+MAP_CHASE_ZOOM_FACTOR=16
+MAP_CHASE_VIDEO=map_chase.mp4
+# TILE_MAP_CLOSE_TOOL=zoom_close.py
+# TILE_MAP_CLOSE_PNG=tilemap_close.png
+# TILE_MAP_CLOSE_META=tilemap_close.png.meta.txt
 
-TILE_MAP_CLOSE_TOOL=zoom_close.py
-TILE_MAP_CLOSE_PNG=tilemap_close.png
-TILE_MAP_CLOSE_META=tilemap_close.png.meta.txt
-
-TILE_MAP_CLOSE_VIDEO=tilemap_close.avi
-TILE_MAP_CLOSE_VIDEO_TOOL=gen_map_video_close.py
+# TILE_MAP_CLOSE_VIDEO=tilemap_close.avi
+# TILE_MAP_CLOSE_VIDEO_TOOL=gen_map_video_close.py
 
 TRACK_MAP_RENDER=tilemap_render.mp4
 TRACK_MAP_OUTPUT_BITRATE=10000k
@@ -324,20 +325,18 @@ $(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
 	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@)
 
 $(MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
-	$(CREATE_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles
+	@# Create link to a tile cache directory
+	ls tiles || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
+	$(MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles
 
 
 #-------------------------------------------------------------------------------------------------------
 
 
-$(TILE_MAP_CLOSE_PNG): $(GPS_INTERMEDIATE_JSON)
+$(MAP_CHASE_VIDEO): $(TRACK_GPX)
 	@# Create link to a tile cache directory
 	ls tiles || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
-	$(TILE_MAP_CLOSE_TOOL) $(GPS_INTERMEDIATE_JSON) --output=$(TILE_MAP_CLOSE_PNG) --zoom=16
-
-
-$(TILE_MAP_CLOSE_VIDEO): $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META)
-	$(TILE_MAP_CLOSE_VIDEO_TOOL) $(TILE_MAP_CLOSE_PNG) $(TILE_MAP_CLOSE_META) --output=$(TILE_MAP_CLOSE_VIDEO)
+	$(MAP_CHASE_VIDEO_TOOL) $< $(MAP_CHASE_ZOOM_FACTOR) --output=$@
 
 
 $(TRACK_MAP_RENDER): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
