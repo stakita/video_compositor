@@ -39,20 +39,14 @@ MERGED_MAP_RENDER=merged_map_render.mp4
 TRACK_GPX=track_gps.gpx
 GOPRO2GPX_TOOL=gopro2gpx
 
-MAP_OVERVIEW_VIDEO_TOOL=create_overview_video
-MAP_OVERVIEW_VIDEO=map_overview.mp4
+TRACK_MAP_OVERVIEW_VIDEO_TOOL=create_overview_video
+TRACK_MAP_OVERVIEW_VIDEO=map_overview.mp4
 
-MAP_CHASE_VIDEO_TOOL=create_chase_video
-MAP_CHASE_ZOOM_FACTOR=16
-MAP_CHASE_VIDEO=map_chase.mp4
-# TILE_MAP_CLOSE_TOOL=zoom_close.py
-# TILE_MAP_CLOSE_PNG=tilemap_close.png
-# TILE_MAP_CLOSE_META=tilemap_close.png.meta.txt
+TRACK_MAP_CHASE_VIDEO_TOOL=create_chase_video
+TRACK_MAP_CHASE_ZOOM_FACTOR=16
+TRACK_MAP_CHASE_VIDEO=map_chase.mp4
 
-# TILE_MAP_CLOSE_VIDEO=tilemap_close.avi
-# TILE_MAP_CLOSE_VIDEO_TOOL=gen_map_video_close.py
-
-TRACK_MAP_RENDER=tilemap_render.mp4
+TRACK_MAP_RENDER=track_map_render.mp4
 TRACK_MAP_OUTPUT_BITRATE=10000k
 
 # HERO_RAW_FILES := hero5/*.MP4
@@ -324,22 +318,22 @@ $(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
 	@# This tool adds the gpx (and kpx) extensions automatically, so we "basename" off the extension
 	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@)
 
-$(MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
+$(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
 	@# Create link to a tile cache directory
 	ls tiles || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
-	$(MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles
+	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles
 
 
 #-------------------------------------------------------------------------------------------------------
 
 
-$(MAP_CHASE_VIDEO): $(TRACK_GPX)
+$(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX)
 	@# Create link to a tile cache directory
 	ls tiles || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
-	$(MAP_CHASE_VIDEO_TOOL) $< $(MAP_CHASE_ZOOM_FACTOR) --output=$@
+	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@
 
 
-$(TRACK_MAP_RENDER): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
+$(TRACK_MAP_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO)
 	MAX_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
 	TILEMAP_CLOSE_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(TILE_MAP_CLOSE_VIDEO)`; \
 	START_PAD=`python -c "print(round($$MAX_DURATION_SECONDS - $$TILEMAP_CLOSE_DURATION_SECONDS - $(shell $(READ_ADVANCE_MAX_SECONDS)), 2))"`; \
@@ -347,9 +341,9 @@ $(TRACK_MAP_RENDER): $(TILE_MAP_CLOSE_VIDEO) $(TILEMAP_WIDE_VIDEO)
 	$(FFMEG_BIN) \
 		-y \
 		-itsoffset $$START_PAD \
-		-i $(TILEMAP_WIDE_VIDEO) \
+		-i $(TRACK_MAP_CHASE_VIDEO) \
 		-itsoffset $$START_PAD \
-		-i $(TILE_MAP_CLOSE_VIDEO) \
+		-i $(TRACK_MAP_OVERVIEW_VIDEO) \
 		-filter_complex " \
 			[0:v][1:v] vstack \
 			" \
