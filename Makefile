@@ -65,6 +65,7 @@ READ_VOLUME_MAX = $(shell python -c "import config; print(config.VOLUME_MAX)")
 READ_HERO_AUDIO_OPTS = $(shell python -c "import config; print(config.HERO_AUDIO_OPTS)")
 
 # functions for retrieving video parameters from ffmpeg
+# these typically export the ffprobe data as json, then we parse and extract with "jq"
 video_height = $(shell ffprobe -v quiet -print_format json -i $(1) -show_streams | jq '.streams[] | select(.codec_type == "video") | .height')
 video_width = $(shell ffprobe -v quiet -print_format json -i $(1) -show_streams | jq '.streams[] | select(.codec_type == "video") | .width')
 duration_seconds = $(shell ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(1))
