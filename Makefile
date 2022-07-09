@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
+# Configuration file for render settings
 BUILD_CONFIG = config.py
-BUILD_PARAMS = build_params.txt
+# Snapshot of the makefile used in the build
+BUILD_MAKEFILE = Makefile.build
 
 HERO_RAW_FILES := $(wildcard hero5/*.MP4)
 HERO_JOIN_CONFIG = hero_join_config.txt
@@ -11,7 +13,8 @@ HERO_WAVEFORM_PLOT = hero.wavform.plot.png
 HERO_WAVEFORM_FILE = hero.wavform.avi
 HERO_PLUS_WAVEFORM = hero_plus_waveform.mp4
 HERO_RENDER = hero_render.mp4
-HERO_OUTPUT_BITRATE = 30000k
+#HERO_OUTPUT_BITRATE = 30000k
+HERO_OUTPUT_BITRATE = 3000k
 HERO_SCALING_FACTOR = 0.75
 HERO_GENERATED_FILES = hero.join.wav
 
@@ -50,8 +53,6 @@ TRACK_MAP_RENDER=track_map_render.mp4
 TRACK_MAP_OUTPUT_BITRATE=10000k
 
 # HERO_RAW_FILES := hero5/*.MP4
-# HERO_INTERMEDIATE_FILES = $(patsubst %.MP4, )
-# MAX_RAW_FILES := max/*.LRV
 # TIME_OPTIONS = -t 00:05:00.000
 # If apad is enabled in the audio filter (different length video), you need to set a bounding time to complete:
 # TIME_OPTIONS = -t 3433.592000
@@ -80,13 +81,12 @@ UNDERLINE=\033[4m
 # echo -e "This text is ${RED}red${NONE} and ${GREEN}green${NONE} and ${BOLD}bold${NONE} and ${UNDERLINE}underlined${NONE}."
 
 
-all: $(BUILD_PARAMS) $(MERGED_RENDER) # merged_full.mp4
+all: $(BUILD_MAKEFILE) $(MERGED_RENDER) # merged_full.mp4
 
-.PHONY: build_params all clean clobber distclean
+.PHONY: all clean clobber distclean
 
-$(BUILD_PARAMS): $(BUILD_CONFIG) Makefile
-	@echo "${BOLD}recording build parameters${NONE}"
-	build_params.py Makefile > $@
+$(BUILD_MAKEFILE): Makefile
+	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
 	cp Makefile Makefile.build
 
 map: $(TRACK_MAP_RENDER) $(MERGED_MAP_RENDER)
@@ -104,7 +104,7 @@ clobber: clean
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
 	rm -f $(MERGED_SBS) $(MERGED_AUDIO) $(MERGED_RENDER)
-	rm -f $(BUILD_CONFIG) $(BUILD_PARAMS) Makefile.build
+	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
 	rm -rf __pycache__
 
 distclean:
@@ -128,27 +128,27 @@ $(BUILD_CONFIG):
 	@echo "${BOLD}generate build config file${NONE}"
 	@echo $(DEFAULT_CONFIG) > $@
 
-filter_audio_test = " \
-[0:a] volume=$(shell $(READ_VOLUME_HERO)) [left]; \
-[1:a] volume=$(shell $(READ_VOLUME_MAX)) [right]; \
-[left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
-"
+# filter_audio_test = " \
+# [0:a] volume=$(shell $(READ_VOLUME_HERO)) [left]; \
+# [1:a] volume=$(shell $(READ_VOLUME_MAX)) [right]; \
+# [left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
+# "
 
-audio_test: $(BUILD_PARAMS)
-	@echo "${BOLD}generate audio test file${NONE}"
-	HERO_FILE=$(firstword $(HERO_RAW_FILES)); \
-	MAX_FILE=$(firstword $(MAX_RAW_FILES)); \
-	$(FFMEG_BIN) \
-		-y \
-		-ss $(shell $(READ_ADVANCE_HERO)) \
-		-i $$HERO_FILE \
-		-ss $(shell $(READ_ADVANCE_MAX)) \
-		-i $$MAX_FILE \
-		-filter_complex $(filter_audio_test) \
-		-map "[a]" \
-		-q:a 4 \
-		$(shell $(READ_TIME_OPTIONS)) \
-		$@.aac
+# audio_test: $(BUILD_PARAMS)
+# 	@echo "${BOLD}generate audio test file${NONE}"
+# 	HERO_FILE=$(firstword $(HERO_RAW_FILES)); \
+# 	MAX_FILE=$(firstword $(MAX_RAW_FILES)); \
+# 	$(FFMEG_BIN) \
+# 		-y \
+# 		-ss $(shell $(READ_ADVANCE_HERO)) \
+# 		-i $$HERO_FILE \
+# 		-ss $(shell $(READ_ADVANCE_MAX)) \
+# 		-i $$MAX_FILE \
+# 		-filter_complex $(filter_audio_test) \
+# 		-map "[a]" \
+# 		-q:a 4 \
+# 		$(shell $(READ_TIME_OPTIONS)) \
+# 		$@.aac
 
 #=======================================================================================================
 
@@ -163,7 +163,7 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
 
-# mix audio track
+# extract audio track - needed for generating audio waveform video
 $(HERO_AUDIO_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}extract time offset hero audio track${NONE}"
 	$(FFMEG_BIN) \
