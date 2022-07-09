@@ -52,15 +52,27 @@ TRACK_MAP_CACHED_FILES = $(wildcard $(TRACK_MAP_CACHE_DIR)/*.png)
 
 FFMEG_BIN = ffmpeg
 
-READ_TIME_OPTIONS = python -c "import config; print(config.TIME_OPTIONS)"
-READ_ADVANCE_MAX_SECONDS = python -c "import config; print(config.ADVANCE_MAX_SECONDS)"
-READ_ADVANCE_HERO_SECONDS = python -c "import config; print(config.ADVANCE_HERO_SECONDS)"
-# next two lines horrible hacks - will get rid of these soon
-READ_ADVANCE_MAX = python -c "h, r =divmod($(shell $(READ_ADVANCE_MAX_SECONDS)), 3600); m, s = divmod(r, 60); print('{:0>2}:{:0>2}:{:05.3f}'.format(int(h), int(m), s))"
-READ_ADVANCE_HERO = python -c "h, r =divmod($(shell $(READ_ADVANCE_HERO_SECONDS)), 3600); m, s = divmod(r, 60); print('{:0>2}:{:0>2}:{:05.3f}'.format(int(h), int(m), s))"
-READ_VOLUME_HERO = python -c "import config; print(config.VOLUME_HERO)"
-READ_VOLUME_MAX = python -c "import config; print(config.VOLUME_MAX)"
-READ_HERO_AUDIO_OPTS = python -c "import config; print(config.HERO_AUDIO_OPTS)"
+READ_TIME_OPTIONS = $(shell python -c "import config; print(config.TIME_OPTIONS)")
+READ_ADVANCE_MAX_SECONDS = $(shell python -c "import config; print(config.ADVANCE_MAX_SECONDS)")
+READ_ADVANCE_HERO_SECONDS = $(shell python -c "import config; print(config.ADVANCE_HERO_SECONDS)")
+
+# convert seconds into ffmpeg time format (ugly hack)
+READ_ADVANCE_MAX = $(shell python -c "h, r =divmod($(READ_ADVANCE_MAX_SECONDS), 3600); m, s = divmod(r, 60); print('{:0>2}:{:0>2}:{:05.3f}'.format(int(h), int(m), s))")
+READ_ADVANCE_HERO = $(shell python -c "h, r =divmod($(READ_ADVANCE_HERO_SECONDS), 3600); m, s = divmod(r, 60); print('{:0>2}:{:0>2}:{:05.3f}'.format(int(h), int(m), s))")
+
+READ_VOLUME_HERO = $(shell python -c "import config; print(config.VOLUME_HERO)")
+READ_VOLUME_MAX = $(shell python -c "import config; print(config.VOLUME_MAX)")
+READ_HERO_AUDIO_OPTS = $(shell python -c "import config; print(config.HERO_AUDIO_OPTS)")
+
+# functions for retrieving video parameters from ffmpeg
+video_height = $(shell ffprobe -v quiet -print_format json -i $(1) -show_streams | jq '.streams[] | select(.codec_type == "video") | .height')
+video_width = $(shell ffprobe -v quiet -print_format json -i $(1) -show_streams | jq '.streams[] | select(.codec_type == "video") | .width')
+duration_seconds = $(shell ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(1))
+# basic inline operators for string numeric operations
+op_multiply = $(shell python -c "print(int($(1) * $(2)))")
+op_subract = $(shell python -c "print(int($(1) - $(2)))")
+op_add = $(shell python -c "print(int($(1) + $(2)))")
+op_max = $(shell python -c "print(max($(1), $(2)))")
 
 NONE=\033[00m
 RED=\033[01;31m
@@ -75,7 +87,8 @@ UNDERLINE=\033[4m
 
 all: $(BUILD_CONFIG) merged map
 
-config: $(BUILD_CONFIG)
+# Comment "Makefile" out during development to be insensitive to changes in this file
+config: $(BUILD_CONFIG) # Makefile
 
 # Side by side video
 merged: $(MERGED_RENDER)
@@ -83,7 +96,7 @@ merged: $(MERGED_RENDER)
 # Full merged map
 map: $(MERGED_MAP_RENDER)
 
-.PHONY: all clean clobber distclean
+.PHONY: all clean clobber distclean 
 
 $(BUILD_MAKEFILE): Makefile
 	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
@@ -142,7 +155,7 @@ $(BUILD_CONFIG):
 #=======================================================================================================
 
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
-$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)  $(BUILD_CONFIG) $(BUILD_MAKEFILE)
+$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)  $(BUILD_CONFIG)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -155,15 +168,23 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
 	@echo "${BOLD}generate waveform progress video${NONE}"
-	MAX_JOIN_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
-	MAX_SCALED_WIDTH=`python -c "print(int($(HERO_SCALING_FACTOR) * $$MAX_JOIN_WIDTH))"` ; \
-	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(HERO_JOIN_FILE)`; \
-	DURATION_TRIMMED=`python -c "print($$DURATION_SECONDS - $(shell $(READ_ADVANCE_HERO_SECONDS)))"`; \
+
+	$(eval MAXIMUM_JOIN_WIDTH:=$(call video_width, $(HERO_JOIN_FILE)))
+	$(eval MAXIMUM_SCALED_WIDTH:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(MAXIMUM_JOIN_WIDTH)))
+	$(eval DURATION_SECONDS:=$(call duration_seconds, $(HERO_JOIN_FILE)))
+	$(eval DURATION_TRIMMED:=$(call op_subract, $(DURATION_SECONDS), $(READ_ADVANCE_HERO_SECONDS)))
+
+	@echo 1: $(MAXIMUM_JOIN_WIDTH)
+	@echo 2: $(MAXIMUM_SCALED_WIDTH)
+	@echo 3: $(DURATION_SECONDS)
+	@echo 4: $(DURATION_TRIMMED)
+	@echo 5: $(READ_ADVANCE_HERO_SECONDS)
+
 	$(WAVEFORM_VIDEO_TOOL) \
 		$(HERO_JOIN_FILE) \
-		$$DURATION_TRIMMED \
+		$(DURATION_TRIMMED) \
 		--output=$(HERO_WAVEFORM_FILE) \
-		--width=$$MAX_SCALED_WIDTH \
+		--width=$(MAXIMUM_SCALED_WIDTH) \
 		--height=100 \
 		--channels=1 
 
@@ -171,33 +192,41 @@ $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
 $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}combine hero and waveform video vertically and audio${NONE}"
 
-	TOP_HEIGHT=`video_geometry.py --height $(HERO_JOIN_FILE)`; \
-	TOP_HEIGHT_SCALED=`python -c "print(int($(HERO_SCALING_FACTOR) * $$TOP_HEIGHT))"` ; \
-	TOP_WIDTH=`video_geometry.py --width $(HERO_JOIN_FILE)`; \
-	TOP_WIDTH_SCALED=`python -c "print(int($(HERO_SCALING_FACTOR) * $$TOP_WIDTH))"` ; \
-	echo TWS: $$TOP_WIDTH_SCALED; \
-	echo THS: $$TOP_HEIGHT_SCALED; \
-	BOTTOM_HEIGHT=`video_geometry.py --height $(HERO_WAVEFORM_FILE)`; \
-	OUTPUT_WIDTH=$$TOP_WIDTH_SCALED; \
-	OUTPUT_HEIGHT=`python -c "print($$TOP_HEIGHT_SCALED + $$BOTTOM_HEIGHT)"`; \
-	TOP_GEOMETRY="$$TOP_WIDTH_SCALED"x"$$TOP_HEIGHT_SCALED"; \
-	GEOMETRY="$$OUTPUT_WIDTH"x"$$OUTPUT_HEIGHT"; \
-	echo G: $$GEOMETRY; \
+	$(eval TOP_HEIGHT:=$(call video_height, $(HERO_JOIN_FILE)))
+	$(eval TOP_HEIGHT_SCALED:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(TOP_HEIGHT)))
+	$(eval TOP_WIDTH:=$(call video_width, $(HERO_JOIN_FILE)))
+	$(eval TOP_WIDTH_SCALED:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(TOP_WIDTH)))
+	$(eval BOTTOM_HEIGHT:=$(call video_height, $(HERO_WAVEFORM_FILE)))
+	$(eval OUTPUT_WIDTH:=$(TOP_WIDTH_SCALED))
+	$(eval OUTPUT_HEIGHT:=$(call op_add, $(TOP_HEIGHT_SCALED), $(BOTTOM_HEIGHT)))
+	$(eval TOP_GEOMETRY:="$(TOP_WIDTH_SCALED)"x"$(TOP_HEIGHT_SCALED)")
+	$(eval GEOMETRY="$(OUTPUT_WIDTH)"x"$(OUTPUT_HEIGHT)")
+
+	@echo 1: $(TOP_HEIGHT)
+	@echo 2: $(TOP_HEIGHT_SCALED)
+	@echo 3: $(TOP_WIDTH)
+	@echo 4: $(TOP_WIDTH_SCALED)
+	@echo 5: $(BOTTOM_HEIGHT)
+	@echo 6: $(OUTPUT_WIDTH)
+	@echo 7: $(OUTPUT_HEIGHT)
+	@echo 8: $(TOP_GEOMETRY)
+	@echo 9: $(GEOMETRY)
+
 	$(FFMEG_BIN) \
 		-y \
-		-ss $(shell $(READ_ADVANCE_HERO)) \
+		-ss $(READ_ADVANCE_HERO) \
 		-i $(HERO_JOIN_FILE) \
 		-i $(HERO_WAVEFORM_FILE) \
 		-filter_complex " \
-			nullsrc=size=$$GEOMETRY [base]; \
-			[0:v] setpts=PTS-STARTPTS,scale=$$TOP_GEOMETRY [top]; \
+			nullsrc=size=$(GEOMETRY) [base]; \
+			[0:v] setpts=PTS-STARTPTS,scale=$(TOP_GEOMETRY) [top]; \
 			[1:v] setpts=PTS-STARTPTS [bottom]; \
 			[base][top] overlay=shortest=1 [tmp1]; \
-			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out]; \
+			[tmp1][bottom] overlay=shortest=1:y=$(TOP_HEIGHT_SCALED) [out]; \
 			[0:a]volume=1.0" \
 		-map "[out]" \
 		-b:v $(HERO_OUTPUT_BITRATE) \
-		$(shell $(READ_TIME_OPTIONS)) \
+		$(READ_TIME_OPTIONS) \
 		$@
 
 
@@ -229,20 +258,29 @@ $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
 		-vf v360=input=dfisheye:ih_fov=187:iv_fov=187:output=e:yaw=90 \
 		-b:v 2500k \
 		-c:a copy \
+		$(READ_TIME_OPTIONS) \
 		$@
 
 # generate waveform file
 $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
 	@echo "${BOLD}generate waveform progress video${NONE}"
-	MAX_JOIN_WIDTH=`video_geometry.py --width $(MAX_JOIN_FILE)`; \
-	MAX_SCALED_WIDTH=`python -c "print(int($(MAX_SCALING_FACTOR) * $$MAX_JOIN_WIDTH))"` ; \
-	DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
-	DURATION_TRIMMED=`python -c "print($$DURATION_SECONDS - $(shell $(READ_ADVANCE_MAX_SECONDS)))"`; \
+
+	$(eval MAXIMUM_JOIN_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
+	$(eval MAXIMUM_SCALED_WIDTH:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAXIMUM_JOIN_WIDTH)))
+	$(eval DURATION_SECONDS:=$(call duration_seconds, $(MAX_JOIN_FILE)))
+	$(eval DURATION_TRIMMED:=$(call op_subract, $(DURATION_SECONDS), $(READ_ADVANCE_MAX_SECONDS)))
+
+	@echo 1: $(MAXIMUM_JOIN_WIDTH)
+	@echo 2: $(MAXIMUM_SCALED_WIDTH)
+	@echo 3: $(DURATION_SECONDS)
+	@echo 4: $(DURATION_TRIMMED)
+	@echo 5: $(READ_ADVANCE_MAX_SECONDS)
+
 	$(WAVEFORM_VIDEO_TOOL) \
 		$(MAX_JOIN_FILE) \
-		$$DURATION_TRIMMED \
+		$(DURATION_TRIMMED) \
 		--output=$(MAX_WAVEFORM_FILE) \
-		--width=$$MAX_SCALED_WIDTH \
+		--width=$(MAXIMUM_SCALED_WIDTH) \
 		--height=100 \
 		--channels=1 
 
@@ -250,33 +288,41 @@ $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
 $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
 
-	TOP_HEIGHT=`video_geometry.py --height $(MAX_JOIN_FILE)`; \
-	TOP_HEIGHT_SCALED=`python -c "print(int($(MAX_SCALING_FACTOR) * $$TOP_HEIGHT))"` ; \
-	TOP_WIDTH=`video_geometry.py --width $(MAX_JOIN_FILE)`; \
-	TOP_WIDTH_SCALED=`python -c "print(int($(MAX_SCALING_FACTOR) * $$TOP_WIDTH))"` ; \
-	echo TWS: $$TOP_WIDTH_SCALED; \
-	echo THS: $$TOP_HEIGHT_SCALED; \
-	BOTTOM_HEIGHT=`video_geometry.py --height $(MAX_WAVEFORM_FILE)`; \
-	OUTPUT_WIDTH=$$TOP_WIDTH_SCALED; \
-	OUTPUT_HEIGHT=`python -c "print($$TOP_HEIGHT_SCALED + $$BOTTOM_HEIGHT)"`; \
-	TOP_GEOMETRY="$$TOP_WIDTH_SCALED"x"$$TOP_HEIGHT_SCALED"; \
-	GEOMETRY="$$OUTPUT_WIDTH"x"$$OUTPUT_HEIGHT"; \
-	echo G: $$GEOMETRY; \
+	$(eval TOP_HEIGHT:=$(call video_height, $(MAX_JOIN_FILE)))
+	$(eval TOP_HEIGHT_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(TOP_HEIGHT)))
+	$(eval TOP_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
+	$(eval TOP_WIDTH_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(TOP_WIDTH)))
+	$(eval BOTTOM_HEIGHT:=$(call video_height, $(MAX_WAVEFORM_FILE)))
+	$(eval OUTPUT_WIDTH:=$(TOP_WIDTH_SCALED))
+	$(eval OUTPUT_HEIGHT:=$(call op_add, $(TOP_HEIGHT_SCALED), $(BOTTOM_HEIGHT)))
+	$(eval TOP_GEOMETRY:="$(TOP_WIDTH_SCALED)"x"$(TOP_HEIGHT_SCALED)")
+	$(eval GEOMETRY="$(OUTPUT_WIDTH)"x"$(OUTPUT_HEIGHT)")
+
+	@echo 1: $(TOP_HEIGHT)
+	@echo 2: $(TOP_HEIGHT_SCALED)
+	@echo 3: $(TOP_WIDTH)
+	@echo 4: $(TOP_WIDTH_SCALED)
+	@echo 5: $(BOTTOM_HEIGHT)
+	@echo 6: $(OUTPUT_WIDTH)
+	@echo 7: $(OUTPUT_HEIGHT)
+	@echo 8: $(TOP_GEOMETRY)
+	@echo 9: $(GEOMETRY)
+
 	$(FFMEG_BIN) \
 		-y \
-		-ss $(shell $(READ_ADVANCE_MAX)) \
+		-ss $(READ_ADVANCE_MAX) \
 		-i $(MAX_JOIN_FILE) \
 		-i $(MAX_WAVEFORM_FILE) \
 		-filter_complex " \
-			nullsrc=size=$$GEOMETRY [base]; \
-			[0:v] setpts=PTS-STARTPTS,scale=$$TOP_GEOMETRY [top]; \
+			nullsrc=size=$(GEOMETRY) [base]; \
+			[0:v] setpts=PTS-STARTPTS,scale=$(TOP_GEOMETRY) [top]; \
 			[1:v] setpts=PTS-STARTPTS [bottom]; \
 			[base][top] overlay=shortest=1 [tmp1]; \
-			[tmp1][bottom] overlay=shortest=1:y=$$TOP_HEIGHT_SCALED [out]; \
+			[tmp1][bottom] overlay=shortest=1:y=$(TOP_HEIGHT_SCALED) [out]; \
 			[0:a]volume=1.0" \
 		-map "[out]" \
 		-b:v $(MAX_OUTPUT_BITRATE) \
-		$(shell $(READ_TIME_OPTIONS)) \
+		$(READ_TIME_OPTIONS) \
 		$@
 
 
@@ -284,10 +330,12 @@ $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
 
 
 $(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
+	@echo "${BOLD}extract GPX data from video${NONE}"
 	@# This tool adds the gpx (and kpx) extensions automatically, so we "basename" off the extension
 	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@)
 
 $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
+	@echo "${BOLD}generate track map overview video${NONE}"
 	@# Create link to a tile cache directory
 	ls $(TRACK_MAP_CACHE_DIR) || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
 	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles
@@ -297,27 +345,39 @@ $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
 
 
 $(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX)
+	@echo "${BOLD}generate track map chase video${NONE}"
 	@# Create link to a tile cache directory
 	ls $(TRACK_MAP_CACHE_DIR) || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
 	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@
 
 
-$(TRACK_MAP_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO)
-	MAX_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
-	TILEMAP_CLOSE_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(TILE_MAP_CLOSE_VIDEO)`; \
-	START_PAD=`python -c "print(round($$MAX_DURATION_SECONDS - $$TILEMAP_CLOSE_DURATION_SECONDS - $(shell $(READ_ADVANCE_MAX_SECONDS)), 2))"`; \
-	echo start_pad: $$START_PAD; \
+$(TRACK_MAP_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE)
+	@echo "${BOLD}generate combined track render stack${NONE}"
+	$(eval MAX_DURATION_SECONDS := $(call duration_seconds, $(MAX_JOIN_FILE)))
+	$(eval TRACK_MAP_CHASE_DURATION_SECONDS := $(call duration_seconds, $(TRACK_MAP_CHASE_VIDEO)))
+	# review the timing calculations here
+	$(eval START_PAD := $(READ_ADVANCE_MAX_SECONDS))
+
+	@echo 1: $(MAX_DURATION_SECONDS)
+	@echo 2: $(TRACK_MAP_CHASE_DURATION_SECONDS)
+	@echo 3: $(START_PAD)
+
+	# MAX_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
+	# TILEMAP_CLOSE_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(TILE_MAP_CLOSE_VIDEO)`; \
+	# START_PAD=`python -cR "print(round($$MAX_DURATION_SECONDS - $$TILEMAP_CLOSE_DURATION_SECONDS - $(READ_ADVANCE_MAX_SECONDS), 2))"`; \
+	# echo start_pad: $$START_PAD; 
+
 	$(FFMEG_BIN) \
 		-y \
-		-itsoffset $$START_PAD \
+		-itsoffset $(START_PAD) \
 		-i $(TRACK_MAP_CHASE_VIDEO) \
-		-itsoffset $$START_PAD \
+		-itsoffset $(START_PAD) \
 		-i $(TRACK_MAP_OVERVIEW_VIDEO) \
 		-filter_complex " \
 			[0:v][1:v] vstack \
 			" \
 		-b:v $(MERGED_OUTPUT_BITRATE) \
-		$(shell $(READ_TIME_OPTIONS)) \
+		$(READ_TIME_OPTIONS) \
 		$@
 
 
@@ -327,15 +387,23 @@ $(TRACK_MAP_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO)
 $(MERGED_RENDER): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG)
 	@echo "${BOLD}combine video into single side-by-side${NONE}"
 
-	$(eval left_width := `video_geometry.py --width $(HERO_RENDER)`)
-	$(eval right_width := `video_geometry.py --width $(MAX_RENDER)`)
-	$(eval left_height := `video_geometry.py --height $(HERO_RENDER)`)
-	$(eval right_height := `video_geometry.py --height $(MAX_RENDER)`)
+	$(eval LEFT_WIDTH := $(call video_width, $(HERO_RENDER)))
+	$(eval LEFT_HEIGHT := $(call video_height, $(HERO_RENDER)))
+	$(eval RIGHT_WIDTH := $(call video_width, $(MAX_RENDER)))
+	$(eval RIGHT_HEIGHT := $(call video_height, $(MAX_RENDER)))
 
-	$(eval output_width := $(shell python -c "print($(left_width) + $(right_width))"))
-	$(eval output_height := $(shell python -c "print(max($(left_height), $(right_height)))"))
+	$(eval OUTPUT_WIDTH := $(call op_add, $(LEFT_WIDTH), $(RIGHT_WIDTH)))
+	$(eval OUTPUT_HEIGHT := $(call op_max, $(LEFT_HEIGHT), $(RIGHT_HEIGHT)))
 
-	$(eval GEOMETRY := $(output_width)x$(output_height))
+	$(eval GEOMETRY := $(OUTPUT_WIDTH)x$(OUTPUT_HEIGHT))
+
+	@echo 1: $(LEFT_WIDTH)
+	@echo 2: $(RIGHT_WIDTH)
+	@echo 3: $(LEFT_HEIGHT)
+	@echo 4: $(RIGHT_HEIGHT)
+	@echo 5: $(OUTPUT_WIDTH)
+	@echo 6: $(OUTPUT_HEIGHT)
+	@echo 7: $(GEOMETRY)
 
 	$(FFMEG_BIN) \
 		-y \
@@ -346,34 +414,36 @@ $(MERGED_RENDER): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG)
 			[0:v] setpts=PTS-STARTPTS [left]; \
 			[1:v] setpts=PTS-STARTPTS [right]; \
 			[base][left] overlay=shortest=0 [tmp1]; \
-			[tmp1][right] overlay=shortest=0:x=$(left_width) [out]; \
+			[tmp1][right] overlay=shortest=0:x=$(LEFT_WIDTH) [out]; \
 			[0:a][1:a] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
 			" \
 		-map "[out]" \
 		-b:v $(MERGED_OUTPUT_BITRATE) \
-		$(shell $(READ_TIME_OPTIONS)) \
+		$(READ_TIME_OPTIONS) \
 		$@
 
 
 #=======================================================================================================
 
 # combine video into full map render
-$(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) #$(HERO_RENDER) $(MAX_RENDER)
+$(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
 	@echo "${BOLD}combine video and map renders into single view${NONE}"
 
-	$(eval left_width := `video_geometry.py --width $(HERO_RENDER)`)
-	$(eval right_width := `video_geometry.py --width $(MAX_RENDER)`)
-	$(eval left_height := `video_geometry.py --height $(HERO_RENDER)`)
-	$(eval right_height := `video_geometry.py --height $(MAX_RENDER)`)
+	$(eval HERO_WIDTH := $(call video_width, $(HERO_RENDER)))
+	$(eval MAX_WIDTH := $(call video_width, $(MAX_RENDER)))
+	$(eval LEFT_WIDTH := $(call op_max, $(HERO_WIDTH), $(MAX_WIDTH)))
 
-	$(eval output_width := $(shell python -c "print($(left_width) + $(right_width))"))
-	$(eval output_height := $(shell python -c "print(max($(left_height), $(right_height)))"))
+	@echo 1: $(LEFT_WIDTH)
+	@echo 2: $(HERO_WIDTH)
+	@echo 3: $(MAX_WIDTH)
 
-	$(eval GEOMETRY := $(output_width)x$(output_height))
+	$(eval TIME_MAX_RENDER := $(call duration_seconds, $(MAX_RENDER)))
+	$(eval TIME_HERO_RENDER := $(call duration_seconds, $(HERO_RENDER)))
+	$(eval TIME_FULL := $(call op_max, $(TIME_MAX_RENDER), $(TIME_HERO_RENDER)))
 
-	$(eval TIME_MAX_RENDER := $(shell ffprobe -i $(MAX_RENDER) -show_entries format=duration -v quiet -of csv="p=0"))
-	$(eval TIME_HERO_RENDER := $(shell ffprobe -i $(HERO_RENDER) -show_entries format=duration -v quiet -of csv="p=0"))
-	$(eval TIME_FULL := $(shell python -c "print(max($(TIME_MAX_RENDER), $(TIME_HERO_RENDER)))"))
+	@echo 8: $(TIME_MAX_RENDER)
+	@echo 9: $(TIME_HERO_RENDER)
+	@echo 10: $(TIME_FULL)
 
 	$(FFMEG_BIN) \
 		-y \
@@ -381,7 +451,7 @@ $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) #$(HERO_RENDER) $(MAX_RENDER)
 		-i $(MAX_RENDER) \
 		-i $(TRACK_MAP_RENDER) \
 		-filter_complex " \
-			[1:v] pad=width=$(left_width):height=0:x=(ow-iw):y=0:color=black [vid1pad]; \
+			[1:v] pad=width=$(LEFT_WIDTH):height=0:x=(ow-iw):y=0:color=black [vid1pad]; \
 			[0:v][vid1pad] vstack [vintleft]; \
 			[vintleft][2:v] hstack [out]; \
 			[0:a] apad [0a_pad]; \
