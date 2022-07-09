@@ -36,16 +36,13 @@ MERGED_RENDER = merged_render.mp4
 MERGED_MAP_OUTPUT_BITRATE = 40000k
 MERGED_MAP_RENDER=merged_map_render.mp4
 
-JOIN_GPS=join_gps.gpx
-GPS_INTERMEDIATE_JSON=gps_inter.json
-GOPRO2GPX=gopro2gpx
-PROCESS_GPX=process_gpx.py
-TILEMAP_WIDE_PNG=tilemap_wide.png
-TILEMAP_WIDE_PNG_RESIZE_CROP_PNG=$(TILEMAP_WIDE_PNG).resize_crop.png
-TILEMAP_WIDE_META=tilemap_wide.png.meta.txt
-TILE_MAP_TOOL=zoom.py
-TILEMAP_WIDE_VIDEO=tilemap_wide.avi
-TILEMAP_VIDEO_TOOL=gen_map_video.py
+TRACK_GPX=track_gps.gpx
+GOPRO2GPX_TOOL=gopro2gpx
+CREATE_OVERVIEW_VIDEO_TOOL=create_overview_video
+MAP_OVERVIEW_VIDEO=map_overview.mp4
+
+# TILEMAP_WIDE_VIDEO=tilemap_wide.avi
+# TILEMAP_VIDEO_TOOL=gen_map_video.py
 
 TILE_MAP_CLOSE_TOOL=zoom_close.py
 TILE_MAP_CLOSE_PNG=tilemap_close.png
@@ -322,21 +319,12 @@ $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(MAX_AUDIO_FILE) $(BUILD_C
 #=======================================================================================================
 
 
-$(JOIN_GPS): $(MAX_JOIN_FISHEYE_FILE)
+$(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
 	@# This tool adds the gpx (and kpx) extensions automatically, so we "basename" off the extension
-	$(GOPRO2GPX) -s -vv $< $(basename $@)
+	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@)
 
-$(GPS_INTERMEDIATE_JSON): $(JOIN_GPS)
-	$(PROCESS_GPX) --output=$@ $<
-
-$(TILEMAP_WIDE_PNG): $(GPS_INTERMEDIATE_JSON)
-	@# Create link to a tile cache directory
-	ls tiles || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
-	$(TILE_MAP_TOOL) $(GPS_INTERMEDIATE_JSON) --output=$(TILEMAP_WIDE_PNG)
-
-$(TILEMAP_WIDE_VIDEO): $(TILEMAP_WIDE_PNG) $(GPS_INTERMEDIATE_JSON)
-	@# XXX need to fix the whole TILEMAP_WIDE_PNG_RESIZE_CROP_PNG mess here
-	$(TILEMAP_VIDEO_TOOL) $(TILEMAP_WIDE_PNG_RESIZE_CROP_PNG) $(TILEMAP_WIDE_META) --output=$(TILEMAP_WIDE_VIDEO)
+$(MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
+	$(CREATE_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles
 
 
 #-------------------------------------------------------------------------------------------------------
