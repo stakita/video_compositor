@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 
 # Configuration file for render settings
 BUILD_CONFIG = config.py
@@ -30,7 +29,7 @@ MERGED_RENDER = merged_render.mp4
 MERGED_MAP_OUTPUT_BITRATE = 40000k
 MERGED_MAP_RENDER = merged_map_render.mp4
 
-WAVEFORM_VIDEO_TOOL = create_waveform_video.py
+WAVEFORM_VIDEO_TOOL = create_waveform_video
 
 TRACK_GPX = track_gps.gpx
 GOPRO2GPX_TOOL = gopro2gpx
