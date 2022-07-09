@@ -95,7 +95,7 @@ config: $(BUILD_CONFIG) # Makefile
 merged: $(MERGED_RENDER)
 
 # Full merged map
-map: $(MERGED_MAP_RENDER)
+merged_map: $(MERGED_MAP_RENDER)
 
 .PHONY: all clean clobber distclean 
 
@@ -115,6 +115,7 @@ clobber: clean
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
 	rm -f $(TRACK_MAP_CACHED_FILES)
+	rm -f $(TRACK_MAP_CACHE_DIR)
 	rm -f $(MERGED_RENDER) $(MERGED_MAP_RENDER)
 	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
 
