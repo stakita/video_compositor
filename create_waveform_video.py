@@ -42,7 +42,7 @@ def generate_waveform_image(input_file, height, width, channels):
     x = mysound.data
 
     dpi = 20
-    # fig = plt.figure(dpi=dpi, figsize=(width / dpi, height / dpi))
+    plt.figure(dpi=dpi, figsize=(width / dpi, height / dpi))
 
     if channels == 2:
         plt.subplot(2, 1, 1)
@@ -106,6 +106,8 @@ def main(args):
         print('Error: %s\n' % str(e))
         print(__doc__)
         return 2
+
+    print('Generating waveform file "%s" (%d, %d) - channels: %d, fps: %d' % (output_file, width, height, channels, fps))
 
     background_filename = output_file + '.background.png'
 
