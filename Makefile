@@ -80,10 +80,14 @@ WHITE=\033[01;37m
 BOLD=\033[1m
 UNDERLINE=\033[4m
 
-# echo -e "This text is ${RED}red${NONE} and ${GREEN}green${NONE} and ${BOLD}bold${NONE} and ${UNDERLINE}underlined${NONE}."
 
+all: $(BUILD_CONFIG)
 
-all: $(BUILD_MAKEFILE) $(MERGED_RENDER) # merged_full.mp4
+# Side by side video
+merged: $(MERGED_RENDER)
+
+# Full merged map
+merged_map: $(MERGED_MAP_RENDER)
 
 .PHONY: all clean clobber distclean
 
@@ -156,7 +160,7 @@ $(BUILD_CONFIG):
 #=======================================================================================================
 
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
-$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG)
+$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)  $(BUILD_CONFIG) $(BUILD_MAKEFILE)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -337,23 +341,6 @@ $(TRACK_MAP_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO)
 
 #=======================================================================================================
 
-# # [0:a][1:a]amerge=inputs=2[a];
-# # [a][out]concat=n=2
-
-# # filter="
-# # [0:v]pad=iw[join.hero]+iw[join.max.hemi]:ih[int];[int][1:v]overlay=W/2:0[vid]' \
-# #  -filter:a "channelmap=0-0|0-1|1-0|1-1" \
-
-# https://trac.ffmpeg.org/wiki/Create%20a%20mosaic%20out%20of%20several%20input%20videos
-# filter_video = " \
-# 	nullsrc=size=$(GEOMETRY) [base]; \
-# 	[0:v] setpts=PTS-STARTPTS [left]; \
-# 	[1:v] setpts=PTS-STARTPTS [right]; \
-# 	[base][left] overlay=shortest=1 [tmp1]; \
-# 	[tmp1][right] overlay=shortest=1:x=$(RIGHT_OFFSET) [out] \
-# 	"
-
-
 # combine video into single side-by-side
 $(MERGED_RENDER): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG)
 	@echo "${BOLD}combine video into single side-by-side${NONE}"
@@ -388,7 +375,7 @@ $(MERGED_RENDER): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG)
 
 #=======================================================================================================
 
-# combine video into single side-by-side
+# combine video into full map render
 $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) #$(HERO_RENDER) $(MAX_RENDER)
 	@echo "${BOLD}combine video and map renders into single view${NONE}"
 
