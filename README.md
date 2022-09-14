@@ -56,7 +56,7 @@ This project is mostly a build script and most of the work is done in dependent 
 
 There are two custom tools required for running this pipeline:
 
-* [**openmaps_tiler**](https://github.com/stakita/openmaps_tiler)
+* [**openstreetmaps_tiler**](https://github.com/stakita/openstreetmaps_tiler)
   
   * Used to transform a [GPX](https://en.wikipedia.org/wiki/GPS_Exchange_Format) file into map videos based on the location and temporal information
   
