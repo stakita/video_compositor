@@ -105,8 +105,8 @@ max_join_file -->|waveform_video_generator| max_waveform_video
 max_waveform_video -->|ffmpeg| max_render
 max_join_file -->|ffmpeg| max_render
 
-max_gpx_data -->|openmaps_tiler| track_overview_video
-max_gpx_data -->|openmaps_tiler| track_chase_video
+max_gpx_data -->|openstreetmaps_tiler| track_overview_video
+max_gpx_data -->|openstreetmaps_tiler| track_chase_video
 track_overview_video -->|ffmpeg| track_map_render
 track_chase_video -->|ffmpeg| track_map_render
 
