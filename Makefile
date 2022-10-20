@@ -124,7 +124,7 @@ clean:
 	rm -f $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(TRACK_MAP_RENDER) $(TRACK_GPX) $(TRACK_MAP_GENERATED_FILES)
 	rm -rf __pycache__ config.pyc
 
-clobber: clean
+clobber: clean logclean
 	@echo "${BOLD}clobber - kill them all${NONE}"
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
@@ -132,6 +132,8 @@ clobber: clean
 	rm -f $(TRACK_MAP_CACHE_DIR)
 	rm -f $(MERGED_RENDER) $(MERGED_MAP_RENDER)
 	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
+
+logclean:
 	rm -f $(LOG_FILES)
 
 distclean: clean
