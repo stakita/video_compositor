@@ -165,7 +165,7 @@ $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)  $(BUILD_CONFIG)
 # join hero files
 $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
-	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@
+	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > log_$@.txt 2>&1
 
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
@@ -188,7 +188,7 @@ $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
 		--output=$(HERO_WAVEFORM_FILE) \
 		--width=$(MAXIMUM_SCALED_WIDTH) \
 		--height=100 \
-		--channels=1 
+		--channels=1 > log_$@.txt 2>&1
 
 # combine video with waveform video
 $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
@@ -229,7 +229,7 @@ $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 		-map "[out]" \
 		-b:v $(HERO_OUTPUT_BITRATE) \
 		$(READ_TIME_OPTIONS) \
-		$@
+		$@ > log_$@.txt 2>&1
 
 
 #=======================================================================================================
@@ -249,7 +249,7 @@ $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG)
 #       to make it dynamic
 $(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
 	@echo "${BOLD}concat max files${NONE}"
-	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@
+	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > log_$@.txt 2>&1
 
 # map max files to hemispherical
 $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
@@ -261,7 +261,7 @@ $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
 		-b:v 2500k \
 		-c:a copy \
 		$(READ_TIME_OPTIONS) \
-		$@
+		$@ > log_$@.txt 2>&1
 
 # generate waveform file
 $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
@@ -284,7 +284,7 @@ $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
 		--output=$(MAX_WAVEFORM_FILE) \
 		--width=$(MAXIMUM_SCALED_WIDTH) \
 		--height=100 \
-		--channels=1 
+		--channels=1 > log_$@.txt 2>&1
 
 # combine video with waveform video
 $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
@@ -325,7 +325,7 @@ $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
 		-map "[out]" \
 		-b:v $(MAX_OUTPUT_BITRATE) \
 		$(READ_TIME_OPTIONS) \
-		$@
+		$@ > log_$@.txt 2>&1
 
 
 #=======================================================================================================
@@ -367,7 +367,7 @@ $(TRACK_MAP_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_
 	# MAX_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(MAX_JOIN_FILE)`; \
 	# TILEMAP_CLOSE_DURATION_SECONDS=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $(TILE_MAP_CLOSE_VIDEO)`; \
 	# START_PAD=`python -cR "print(round($$MAX_DURATION_SECONDS - $$TILEMAP_CLOSE_DURATION_SECONDS - $(READ_ADVANCE_MAX_SECONDS), 2))"`; \
-	# echo start_pad: $$START_PAD; 
+	# echo start_pad: $$START_PAD;
 
 	$(FFMEG_BIN) \
 		-y \
@@ -380,7 +380,7 @@ $(TRACK_MAP_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_
 			" \
 		-b:v $(MERGED_OUTPUT_BITRATE) \
 		$(READ_TIME_OPTIONS) \
-		$@
+		$@ > log_$@.txt 2>&1
 
 
 #=======================================================================================================
@@ -422,7 +422,7 @@ $(MERGED_RENDER): $(HERO_RENDER) $(MAX_RENDER) $(BUILD_CONFIG)
 		-map "[out]" \
 		-b:v $(MERGED_OUTPUT_BITRATE) \
 		$(READ_TIME_OPTIONS) \
-		$@
+		$@ > log_$@.txt 2>&1
 
 
 #=======================================================================================================
@@ -463,6 +463,6 @@ $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
 		-map "[out]" \
 		-b:v $(MERGED_MAP_OUTPUT_BITRATE) \
 		-t $(TIME_FULL) \
-		$@
+		$@ > log_$@.txt 2>&1
 
 
