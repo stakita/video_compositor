@@ -334,13 +334,13 @@ $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
 $(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
 	@echo "${BOLD}extract GPX data from video${NONE}"
 	@# This tool adds the gpx (and kpx) extensions automatically, so we "basename" off the extension
-	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@)
+	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@) > log_$@.txt 2>&1
 
 $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
 	@echo "${BOLD}generate track map overview video${NONE}"
 	@# Create link to a tile cache directory
 	ls $(TRACK_MAP_CACHE_DIR) || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
-	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles
+	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles > log_$@.txt 2>&1
 
 
 #-------------------------------------------------------------------------------------------------------
@@ -350,7 +350,7 @@ $(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX)
 	@echo "${BOLD}generate track map chase video${NONE}"
 	@# Create link to a tile cache directory
 	ls $(TRACK_MAP_CACHE_DIR) || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
-	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@
+	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@ > log_$@.txt 2>&1
 
 
 $(TRACK_MAP_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE)
