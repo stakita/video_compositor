@@ -86,7 +86,7 @@ BOLD=\033[1m
 UNDERLINE=\033[4m
 
 
-all: $(BUILD_CONFIG) merged map
+all: $(BUILD_CONFIG) merged_map
 
 # Comment "Makefile" out during development to be insensitive to changes in this file
 config: $(BUILD_CONFIG) # Makefile
