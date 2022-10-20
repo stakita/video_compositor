@@ -50,6 +50,20 @@ TRACK_MAP_OUTPUT_BITRATE=10000k
 TRACK_MAP_GENERATED_FILES = track_gps.kpx track_gps.bin map_overview.mp4.background.png
 TRACK_MAP_CACHED_FILES = $(wildcard $(TRACK_MAP_CACHE_DIR)/*.png)
 
+LOG_FILES = log_hero.join.mp4.txt \
+			log_hero_render.mp4.txt \
+			log_map_overview.mp4.txt \
+			log_max.join.mp4.txt \
+			log_max_render.mp4.txt \
+			log_track_gps.gpx.txt \
+			log_hero.waveform.mp4.txt \
+			log_map_chase.mp4.txt \
+			log_max.join.fisheye.mp4.txt \
+			log_max.waveform.mp4.txt \
+			log_merged_map_render.mp4.txt \
+			log_merged_render.mp4.txt \
+			log_track_map_render.mp4.txt
+
 FFMEG_BIN = ffmpeg
 
 READ_TIME_OPTIONS = $(shell python -c "import config; print(config.TIME_OPTIONS)")
@@ -118,6 +132,7 @@ clobber: clean
 	rm -f $(TRACK_MAP_CACHE_DIR)
 	rm -f $(MERGED_RENDER) $(MERGED_MAP_RENDER)
 	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
+	rm -f $(LOG_FILES)
 
 distclean: clean
 	@echo "${BOLD}distclean - leave final files and config${NONE}"
@@ -288,7 +303,7 @@ $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
 
 # combine video with waveform video
 $(MAX_RENDER): $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}combine hero and waveform video vertically${NONE}"
+	@echo "${BOLD}combine max and waveform video vertically${NONE}"
 
 	$(eval TOP_HEIGHT:=$(call video_height, $(MAX_JOIN_FILE)))
 	$(eval TOP_HEIGHT_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(TOP_HEIGHT)))
