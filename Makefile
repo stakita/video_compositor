@@ -145,7 +145,7 @@ distclean: clean
 
 DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = '' \#', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
 
-$(BUILD_CONFIG): snapshot_makefile
+$(BUILD_CONFIG):
 	@echo "${BOLD}generate build config file${NONE}"
 	@echo $(DEFAULT_CONFIG) > $@
 
@@ -174,7 +174,7 @@ $(BUILD_CONFIG): snapshot_makefile
 #=======================================================================================================
 
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
-$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)  $(BUILD_CONFIG)
+$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG) snapshot_makefile
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -252,7 +252,7 @@ $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 #=======================================================================================================
 
 # generate ffmpeg join config for max files
-$(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG)
+$(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG) snapshot_makefile
 	@echo "${BOLD}generate max ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(MAX_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
