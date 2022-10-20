@@ -356,7 +356,7 @@ $(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
 $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX)
 	@echo "${BOLD}generate track map overview video${NONE}"
 	@# Create link to a tile cache directory
-	ls $(TRACK_MAP_CACHE_DIR) || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
+	ls $(TRACK_MAP_CACHE_DIR) > /dev/null 2>&1 || (mkdir -p /var/tmp/tiles && ln -s /var/tmp/tiles)
 	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles > log_$@.txt 2>&1
 
 
