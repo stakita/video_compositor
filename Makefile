@@ -97,7 +97,7 @@ merged: $(MERGED_RENDER)
 # Full merged map
 merged_map: $(MERGED_MAP_RENDER)
 
-.PHONY: all clean clobber distclean 
+.PHONY: all clean clobber distclean
 
 $(BUILD_MAKEFILE): Makefile
 	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
@@ -108,7 +108,7 @@ clean:
 	rm -f $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
 	rm -f $(MAX_WAVEFORM_FILE) $(MAX_RENDER) $(MAX_GENERATED_FILES)
 	rm -f $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(TRACK_MAP_RENDER) $(TRACK_GPX) $(TRACK_MAP_GENERATED_FILES)
-	rm -rf __pycache__
+	rm -rf __pycache__ config.pyc
 
 clobber: clean
 	@echo "${BOLD}clobber - kill them all${NONE}"
@@ -165,7 +165,7 @@ $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)  $(BUILD_CONFIG)
 # join hero files
 $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
-	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy $@
+	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@
 
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
