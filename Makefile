@@ -115,10 +115,6 @@ merged_map: $(MERGED_MAP_RENDER)
 
 .PHONY: all clean clobber distclean
 
-snapshot_makefile:
-	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
-	cp Makefile Makefile.build
-
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
 	rm -f $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
@@ -150,6 +146,8 @@ DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\
 $(BUILD_CONFIG):
 	@echo "${BOLD}generate build config file${NONE}"
 	@echo $(DEFAULT_CONFIG) > $@
+	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
+	cp Makefile Makefile.build
 
 # filter_audio_test = " \
 # [0:a] volume=$(shell $(READ_VOLUME_HERO)) [left]; \
@@ -176,7 +174,7 @@ $(BUILD_CONFIG):
 #=======================================================================================================
 
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
-$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG) # snapshot_makefile
+$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -254,7 +252,7 @@ $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 #=======================================================================================================
 
 # generate ffmpeg join config for max files
-$(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG) # snapshot_makefile
+$(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG)
 	@echo "${BOLD}generate max ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(MAX_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
