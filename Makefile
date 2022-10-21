@@ -174,7 +174,7 @@ $(BUILD_CONFIG):
 #=======================================================================================================
 
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
-$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG) snapshot_makefile
+$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG) # snapshot_makefile
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -252,7 +252,7 @@ $(HERO_RENDER): $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE) $(BUILD_CONFIG)
 #=======================================================================================================
 
 # generate ffmpeg join config for max files
-$(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG) snapshot_makefile
+$(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG) # snapshot_makefile
 	@echo "${BOLD}generate max ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(MAX_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
