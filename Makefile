@@ -87,6 +87,8 @@ duration_seconds = $(shell ffprobe -v error -show_entries format=duration -of de
 op_multiply = $(shell python -c "print(int($(1) * $(2)))")
 op_subract = $(shell python -c "print(int($(1) - $(2)))")
 op_add = $(shell python -c "print(int($(1) + $(2)))")
+# Todo: Fix this horrible work around
+op_add_4 = $(shell python -c "print(int($(1) + $(2) + $(3) + $(4)))")
 op_max = $(shell python -c "print(max($(1), $(2)))")
 
 NONE=\033[00m
@@ -482,3 +484,112 @@ $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
 		$@ > log_$@.txt 2>&1
 
 
+# combine video into full map render
+# $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
+full_render.mp4: $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
+	@echo "${BOLD}combine video and map renders into single view${NONE}"
+
+	@# $(eval HERO_TOP_HEIGHT:=$(call video_height, $(HERO_JOIN_FILE)))
+	@# $(eval HERO_TOP_HEIGHT_SCALED:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(HERO_TOP_HEIGHT)))
+	@# $(eval HERO_TOP_WIDTH:=$(call video_width, $(HERO_JOIN_FILE)))
+	@# $(eval HERO_TOP_WIDTH_SCALED:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(HERO_TOP_WIDTH)))
+	@# $(eval HERO_BOTTOM_HEIGHT:=$(call video_height, $(HERO_WAVEFORM_FILE)))
+	@# $(eval HERO_OUTPUT_WIDTH:=$(HERO_TOP_WIDTH_SCALED))
+	@# $(eval HERO_OUTPUT_HEIGHT:=$(call op_add, $(HERO_TOP_HEIGHT_SCALED), $(HERO_BOTTOM_HEIGHT)))
+	@# $(eval HERO_TOP_GEOMETRY:="$(HERO_TOP_WIDTH_SCALED)"x"$(HERO_TOP_HEIGHT_SCALED)")
+	@# $(eval HERO_GEOMETRY="$(HERO_OUTPUT_WIDTH)"x"$(HERO_OUTPUT_HEIGHT)")
+
+	@ #----------------------------------------------------------
+	$(eval HERO_HEIGHT:=$(call video_height, $(HERO_JOIN_FILE)))
+	$(eval HERO_HEIGHT_SCALED:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(HERO_HEIGHT)))
+	$(eval HERO_WIDTH:=$(call video_width, $(HERO_JOIN_FILE)))
+	$(eval HERO_WIDTH_SCALED:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(HERO_WIDTH)))
+	$(eval HERO_GEOMETRY="$(HERO_WIDTH_SCALED)"x"$(HERO_HEIGHT_SCALED)")
+
+	$(eval HERO_WAVEFORM_HEIGHT:=$(call video_height, $(HERO_WAVEFORM_FILE)))
+	$(eval HERO_WAVEFORM_WIDTH:=$(call video_width, $(HERO_WAVEFORM_FILE)))
+
+	@ #==========================================================
+
+	@# $(eval MAX_TOP_HEIGHT:=$(call video_height, $(MAX_JOIN_FILE)))
+	@# $(eval MAX_TOP_HEIGHT_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAX_TOP_HEIGHT)))
+	@# $(eval MAX_TOP_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
+	@# $(eval MAX_TOP_WIDTH_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAX_TOP_WIDTH)))
+	@# $(eval MAX_BOTTOM_HEIGHT:=$(call video_height, $(MAX_WAVEFORM_FILE)))
+	@# $(eval MAX_OUTPUT_WIDTH:=$(MAX_TOP_WIDTH_SCALED))
+	@# $(eval MAX_OUTPUT_HEIGHT:=$(call op_add, $(MAX_TOP_HEIGHT_SCALED), $(MAX_BOTTOM_HEIGHT)))
+	@# $(eval MAX_TOP_GEOMETRY:="$(MAX_TOP_WIDTH_SCALED)"x"$(MAX_TOP_HEIGHT_SCALED)")
+	@# $(eval MAX_GEOMETRY="$(MAX_OUTPUT_WIDTH)"x"$(MAX_OUTPUT_HEIGHT)")
+
+	@ #----------------------------------------------------------
+
+	$(eval MAX_HEIGHT:=$(call video_height, $(MAX_JOIN_FILE)))
+	$(eval MAX_HEIGHT_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAX_HEIGHT)))
+	$(eval MAX_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
+	$(eval MAX_WIDTH_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAX_WIDTH)))
+	$(eval MAX_GEOMETRY="$(MAX_WIDTH_SCALED)"x"$(MAX_HEIGHT_SCALED)")
+
+	$(eval MAX_WAVEFORM_HEIGHT:=$(call video_height, $(MAX_WAVEFORM_FILE)))
+	$(eval MAX_WAVEFORM_WIDTH:=$(call video_width, $(MAX_WAVEFORM_FILE)))
+
+	@ #==========================================================
+
+	@# $(eval HERO_WIDTH := $(call video_width, $(HERO_RENDER)))
+	@# $(eval MAX_WIDTH := $(call video_width, $(MAX_RENDER)))
+	@# $(eval LEFT_WIDTH := $(call op_max, $(HERO_WIDTH), $(MAX_WIDTH)))
+
+	@ #----------------------------------------------------------
+
+	@# Todo: fix these - hard coded currently
+	$(eval RENDER_WIDTH := $(HERO_WIDTH_SCALED))
+	$(eval RENDER_HEIGHT := $(call op_add_4, $(HERO_HEIGHT_SCALED), $(HERO_WAVEFORM_HEIGHT), $(MAX_HEIGHT_SCALED), $(MAX_WAVEFORM_HEIGHT)))
+
+	@ #==========================================================
+
+	@echo 1: $(LEFT_WIDTH)
+	@echo 2: $(HERO_WIDTH)
+	@echo 3: $(MAX_WIDTH)
+
+	$(eval TIME_MAX_RENDER := $(call duration_seconds, $(MAX_RENDER)))
+	$(eval TIME_HERO_RENDER := $(call duration_seconds, $(HERO_RENDER)))
+	$(eval TIME_FULL := $(call op_max, $(TIME_MAX_RENDER), $(TIME_HERO_RENDER)))
+
+	@echo 8: $(TIME_MAX_RENDER)
+	@echo 9: $(TIME_HERO_RENDER)
+	@echo 10: $(TIME_FULL)
+
+	$(FFMEG_BIN) \
+		-y \
+		-vsync vfr \
+		-i $(HERO_JOIN_FILE) \
+		-i $(HERO_WAVEFORM_FILE) \
+		-i $(MAX_JOIN_FILE) \
+		-i $(MAX_WAVEFORM_FILE) \
+		-filter_complex " \
+			[0:v] setpts=PTS-STARTPTS,scale=$(HERO_GEOMETRY) [vsized0]; \
+			[2:v] setpts=PTS-STARTPTS,scale=$(MAX_GEOMETRY) [vsized2]; \
+			[vsized2][3:v] vstack [vmaxstack]; \
+			[vmaxstack] pad=width=$(HERO_WIDTH_SCALED):x=(ow-iw):color=black [vmaxstackpad]; \
+			[vsized0][1:v] vstack [vherostack]; \
+			[vherostack][vmaxstackpad] vstack [out] \
+			" \
+		-map "[out]" \
+		-b:v $(MERGED_MAP_OUTPUT_BITRATE) \
+		-t $(TIME_FULL) \
+		$@ > log_$@.txt 2>&1
+
+# [1:v] setpts=PTS-STARTPTS [vsized1]; \
+# [3:v] setpts=PTS-STARTPTS [vsized3]; \
+
+# -i $(TRACK_MAP_OVERVIEW_VIDEO) \
+# -i $(TRACK_MAP_CHASE_VIDEO) \
+# [4:v] setpts=PTS-STARTPTS,scale= [vsized4]
+# [5:v] setpts=PTS-STARTPTS,scale= [vsized5]
+
+
+# [1:v] pad=width=$(LEFT_WIDTH):height=0:x=(ow-iw):y=0:color=black [vid1pad]; \
+# [0:v][vid1pad] vstack [vintleft]; \
+# [vintleft][2:v] hstack [out]; \
+# [0:a] apad [0a_pad]; \
+# [1:a] apad [1a_pad]; \
+# [0a_pad][1a_pad] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
