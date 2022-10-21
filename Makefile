@@ -486,7 +486,7 @@ $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
 # combine video into full map render
 # $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
 $(FULL_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
-	@echo "${BOLD}combine video and map renders into single view${NONE}"
+	@echo "${BOLD}combine video, waveform and map renders into single view${NONE}"
 
 	@ #----------------------------------------------------------
 	$(eval HERO_HEIGHT:=$(call video_height, $(HERO_JOIN_FILE)))
@@ -524,14 +524,6 @@ $(FULL_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_
 
 	@ #----------------------------------------------------------
 
-	$(eval TIME_MAX_RENDER := $(call duration_seconds, $(MAX_RENDER)))
-	$(eval TIME_HERO_RENDER := $(call duration_seconds, $(HERO_RENDER)))
-	$(eval TIME_FULL := $(call op_max, $(TIME_MAX_RENDER), $(TIME_HERO_RENDER)))
-
-	@echo 5: $(TIME_MAX_RENDER)
-	@echo 6: $(TIME_HERO_RENDER)
-	@echo 7: $(TIME_FULL)
-
 	$(FFMEG_BIN) \
 		-y \
 		-i $(HERO_JOIN_FILE) \
@@ -555,6 +547,6 @@ $(FULL_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_
 			" \
 		-map "[out]" \
 		-b:v $(MERGED_MAP_OUTPUT_BITRATE) \
-		-t $(TIME_FULL) \
+		$(READ_TIME_OPTIONS) \
 		-r 23.98 \
 		$@ > log_$@.txt 2>&1
