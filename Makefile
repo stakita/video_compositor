@@ -483,7 +483,6 @@ $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
 		-t $(TIME_FULL) \
 		$@ > log_$@.txt 2>&1
 
-
 # combine video into full map render
 # $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
 full_render.mp4: $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
@@ -560,36 +559,27 @@ full_render.mp4: $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN
 
 	$(FFMEG_BIN) \
 		-y \
-		-vsync vfr \
 		-i $(HERO_JOIN_FILE) \
 		-i $(HERO_WAVEFORM_FILE) \
 		-i $(MAX_JOIN_FILE) \
 		-i $(MAX_WAVEFORM_FILE) \
+		-i $(TRACK_MAP_OVERVIEW_VIDEO) \
+		-i $(TRACK_MAP_CHASE_VIDEO) \
 		-filter_complex " \
 			[0:v] setpts=PTS-STARTPTS,scale=$(HERO_GEOMETRY) [vsized0]; \
 			[2:v] setpts=PTS-STARTPTS,scale=$(MAX_GEOMETRY) [vsized2]; \
 			[vsized2][3:v] vstack [vmaxstack]; \
 			[vmaxstack] pad=width=$(HERO_WIDTH_SCALED):x=(ow-iw):color=black [vmaxstackpad]; \
 			[vsized0][1:v] vstack [vherostack]; \
-			[vherostack][vmaxstackpad] vstack [out] \
+			[vherostack][vmaxstackpad] vstack [leftstack]; \
+			[4:v][5:v] vstack [rightstack]; \
+			[leftstack][rightstack] hstack [out]; \
+			[0:a] apad [0a_pad]; \
+			[2:a] apad [1a_pad]; \
+			[0a_pad][1a_pad] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
 			" \
 		-map "[out]" \
 		-b:v $(MERGED_MAP_OUTPUT_BITRATE) \
 		-t $(TIME_FULL) \
+		-r 23.98 \
 		$@ > log_$@.txt 2>&1
-
-# [1:v] setpts=PTS-STARTPTS [vsized1]; \
-# [3:v] setpts=PTS-STARTPTS [vsized3]; \
-
-# -i $(TRACK_MAP_OVERVIEW_VIDEO) \
-# -i $(TRACK_MAP_CHASE_VIDEO) \
-# [4:v] setpts=PTS-STARTPTS,scale= [vsized4]
-# [5:v] setpts=PTS-STARTPTS,scale= [vsized5]
-
-
-# [1:v] pad=width=$(LEFT_WIDTH):height=0:x=(ow-iw):y=0:color=black [vid1pad]; \
-# [0:v][vid1pad] vstack [vintleft]; \
-# [vintleft][2:v] hstack [out]; \
-# [0:a] apad [0a_pad]; \
-# [1:a] apad [1a_pad]; \
-# [0a_pad][1a_pad] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
