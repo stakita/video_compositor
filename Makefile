@@ -29,6 +29,8 @@ MERGED_RENDER = merged_render.mp4
 MERGED_MAP_OUTPUT_BITRATE = 40000k
 MERGED_MAP_RENDER = merged_map_render.mp4
 
+FULL_RENDER = full_render.mp4
+
 WAVEFORM_VIDEO_TOOL = create_waveform_video
 
 TRACK_GPX = track_gps.gpx
@@ -483,18 +485,8 @@ $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
 
 # combine video into full map render
 # $(MERGED_MAP_RENDER):  $(TRACK_MAP_RENDER) $(HERO_RENDER) $(MAX_RENDER)
-full_render.mp4: $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
+$(FULL_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
 	@echo "${BOLD}combine video and map renders into single view${NONE}"
-
-	@# $(eval HERO_TOP_HEIGHT:=$(call video_height, $(HERO_JOIN_FILE)))
-	@# $(eval HERO_TOP_HEIGHT_SCALED:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(HERO_TOP_HEIGHT)))
-	@# $(eval HERO_TOP_WIDTH:=$(call video_width, $(HERO_JOIN_FILE)))
-	@# $(eval HERO_TOP_WIDTH_SCALED:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(HERO_TOP_WIDTH)))
-	@# $(eval HERO_BOTTOM_HEIGHT:=$(call video_height, $(HERO_WAVEFORM_FILE)))
-	@# $(eval HERO_OUTPUT_WIDTH:=$(HERO_TOP_WIDTH_SCALED))
-	@# $(eval HERO_OUTPUT_HEIGHT:=$(call op_add, $(HERO_TOP_HEIGHT_SCALED), $(HERO_BOTTOM_HEIGHT)))
-	@# $(eval HERO_TOP_GEOMETRY:="$(HERO_TOP_WIDTH_SCALED)"x"$(HERO_TOP_HEIGHT_SCALED)")
-	@# $(eval HERO_GEOMETRY="$(HERO_OUTPUT_WIDTH)"x"$(HERO_OUTPUT_HEIGHT)")
 
 	@ #----------------------------------------------------------
 	$(eval HERO_HEIGHT:=$(call video_height, $(HERO_JOIN_FILE)))
@@ -506,17 +498,7 @@ full_render.mp4: $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN
 	$(eval HERO_WAVEFORM_HEIGHT:=$(call video_height, $(HERO_WAVEFORM_FILE)))
 	$(eval HERO_WAVEFORM_WIDTH:=$(call video_width, $(HERO_WAVEFORM_FILE)))
 
-	@ #==========================================================
-
-	@# $(eval MAX_TOP_HEIGHT:=$(call video_height, $(MAX_JOIN_FILE)))
-	@# $(eval MAX_TOP_HEIGHT_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAX_TOP_HEIGHT)))
-	@# $(eval MAX_TOP_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
-	@# $(eval MAX_TOP_WIDTH_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAX_TOP_WIDTH)))
-	@# $(eval MAX_BOTTOM_HEIGHT:=$(call video_height, $(MAX_WAVEFORM_FILE)))
-	@# $(eval MAX_OUTPUT_WIDTH:=$(MAX_TOP_WIDTH_SCALED))
-	@# $(eval MAX_OUTPUT_HEIGHT:=$(call op_add, $(MAX_TOP_HEIGHT_SCALED), $(MAX_BOTTOM_HEIGHT)))
-	@# $(eval MAX_TOP_GEOMETRY:="$(MAX_TOP_WIDTH_SCALED)"x"$(MAX_TOP_HEIGHT_SCALED)")
-	@# $(eval MAX_GEOMETRY="$(MAX_OUTPUT_WIDTH)"x"$(MAX_OUTPUT_HEIGHT)")
+	@echo 1: $(HERO_GEOMETRY)
 
 	@ #----------------------------------------------------------
 
@@ -529,11 +511,7 @@ full_render.mp4: $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN
 	$(eval MAX_WAVEFORM_HEIGHT:=$(call video_height, $(MAX_WAVEFORM_FILE)))
 	$(eval MAX_WAVEFORM_WIDTH:=$(call video_width, $(MAX_WAVEFORM_FILE)))
 
-	@ #==========================================================
-
-	@# $(eval HERO_WIDTH := $(call video_width, $(HERO_RENDER)))
-	@# $(eval MAX_WIDTH := $(call video_width, $(MAX_RENDER)))
-	@# $(eval LEFT_WIDTH := $(call op_max, $(HERO_WIDTH), $(MAX_WIDTH)))
+	@echo 2: $(MAX_GEOMETRY)
 
 	@ #----------------------------------------------------------
 
@@ -541,19 +519,18 @@ full_render.mp4: $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN
 	$(eval RENDER_WIDTH := $(HERO_WIDTH_SCALED))
 	$(eval RENDER_HEIGHT := $(call op_add_4, $(HERO_HEIGHT_SCALED), $(HERO_WAVEFORM_HEIGHT), $(MAX_HEIGHT_SCALED), $(MAX_WAVEFORM_HEIGHT)))
 
-	@ #==========================================================
+	@echo 3: $(RENDER_WIDTH)
+	@echo 4: $(RENDER_HEIGHT)
 
-	@echo 1: $(LEFT_WIDTH)
-	@echo 2: $(HERO_WIDTH)
-	@echo 3: $(MAX_WIDTH)
+	@ #----------------------------------------------------------
 
 	$(eval TIME_MAX_RENDER := $(call duration_seconds, $(MAX_RENDER)))
 	$(eval TIME_HERO_RENDER := $(call duration_seconds, $(HERO_RENDER)))
 	$(eval TIME_FULL := $(call op_max, $(TIME_MAX_RENDER), $(TIME_HERO_RENDER)))
 
-	@echo 8: $(TIME_MAX_RENDER)
-	@echo 9: $(TIME_HERO_RENDER)
-	@echo 10: $(TIME_FULL)
+	@echo 5: $(TIME_MAX_RENDER)
+	@echo 6: $(TIME_HERO_RENDER)
+	@echo 7: $(TIME_FULL)
 
 	$(FFMEG_BIN) \
 		-y \
