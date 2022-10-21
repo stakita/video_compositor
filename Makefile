@@ -8,7 +8,6 @@ HERO_RAW_FILES := $(wildcard hero5/*.MP4)
 HERO_JOIN_CONFIG = hero_join_config.txt
 HERO_JOIN_FILE = hero.join.mp4
 HERO_WAVEFORM_FILE = hero.waveform.mp4
-HERO_RENDER = hero_render.mp4
 HERO_OUTPUT_BITRATE = 30000k
 HERO_SCALING_FACTOR = 0.75
 HERO_GENERATED_FILES = hero.join.wav hero.waveform.mp4.background.png
@@ -18,7 +17,6 @@ MAX_JOIN_CONFIG = max_join_config.txt
 MAX_JOIN_FISHEYE_FILE = max.join.fisheye.mp4
 MAX_JOIN_FILE = max.join.mp4
 MAX_WAVEFORM_FILE = max.waveform.mp4
-MAX_RENDER = max_render.mp4
 MAX_OUTPUT_BITRATE = 30000k
 MAX_SCALING_FACTOR = 1.0
 MAX_GENERATED_FILES = max.join.wav max.waveform.mp4.background.png
@@ -40,24 +38,17 @@ TRACK_MAP_CHASE_VIDEO_TOOL=create_chase_video
 TRACK_MAP_CHASE_ZOOM_FACTOR=16
 TRACK_MAP_CHASE_VIDEO=map_chase.mp4
 
-# combined map render video
-TRACK_MAP_RENDER=track_map_render.mp4
-TRACK_MAP_OUTPUT_BITRATE=10000k
-
 TRACK_MAP_GENERATED_FILES = track_gps.kpx track_gps.bin map_overview.mp4.background.png
 TRACK_MAP_CACHED_FILES = $(wildcard $(TRACK_MAP_CACHE_DIR)/*.png)
 
 LOG_FILES = log_hero.join.mp4.txt \
-			log_hero_render.mp4.txt \
 			log_map_overview.mp4.txt \
 			log_max.join.mp4.txt \
-			log_max_render.mp4.txt \
 			log_track_gps.gpx.txt \
 			log_hero.waveform.mp4.txt \
 			log_map_chase.mp4.txt \
 			log_max.join.fisheye.mp4.txt \
 			log_max.waveform.mp4.txt \
-			log_track_map_render.mp4.txt \
 			log_full_render.mp4.txt
 
 FFMEG_BIN = ffmpeg
@@ -109,9 +100,9 @@ full_render: $(FULL_RENDER)
 
 clean:
 	@echo "${BOLD}clean derivative files - leave join files${NONE}"
-	rm -f $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)  $(HERO_RENDER)
+	rm -f $(HERO_WAVEFORM_FILE) $(HERO_GENERATED_FILES)
 	rm -f $(MAX_WAVEFORM_FILE) $(MAX_RENDER) $(MAX_GENERATED_FILES)
-	rm -f $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(TRACK_MAP_RENDER) $(TRACK_GPX) $(TRACK_MAP_GENERATED_FILES)
+	rm -f $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(TRACK_GPX) $(TRACK_MAP_GENERATED_FILES)
 	rm -rf __pycache__ config.pyc
 
 clobber: clean logclean
