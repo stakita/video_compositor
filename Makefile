@@ -155,7 +155,7 @@ $(BUILD_CONFIG):
 #=======================================================================================================
 
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
-$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG)
+$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -166,7 +166,7 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > log_$@.txt 2>&1
 
 # generate waveform file
-$(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
+$(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}generate hero waveform progress video${NONE}"
 
 	$(eval MAXIMUM_JOIN_WIDTH:=$(call video_width, $(HERO_JOIN_FILE)))
@@ -208,7 +208,7 @@ $(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > log_$@.txt 2>&1
 
 # map max files to hemispherical
-$(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
+$(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}map max files to hemispherical${NONE}"
 	$(FFMEG_BIN) \
 		-y \
@@ -220,7 +220,7 @@ $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
 		$@ > log_$@.txt 2>&1
 
 # generate waveform file
-$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
+$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}generate max waveform progress video${NONE}"
 
 	$(eval MAXIMUM_JOIN_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
@@ -264,7 +264,7 @@ $(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX) $(TRACK_MAP_CACHE_DIR)
 #=======================================================================================================
 
 # combine video into full map render
-$(FULL_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
+$(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
 	@echo "${BOLD}combine video, waveform and map renders into single view${NONE}"
 
 	@ #----------------------------------------------------------
