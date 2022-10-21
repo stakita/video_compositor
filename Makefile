@@ -22,6 +22,8 @@ MAX_GENERATED_FILES = max.join.wav max.waveform.mp4.background.png
 FULL_RENDER_OUTPUT_BITRATE = 40000k
 FULL_RENDER = full_render.mp4
 
+AUDIO_TEST_FILE = audio_test.aac
+
 WAVEFORM_VIDEO_TOOL = create_waveform_video
 
 TRACK_GPX = track_gps.gpx
@@ -87,12 +89,13 @@ BOLD=\033[1m
 UNDERLINE=\033[4m
 
 
-all: $(BUILD_CONFIG) full_render
+all: $(BUILD_CONFIG) audio_test
 
 # Comment "Makefile" out during development to be insensitive to changes in this file
 config: $(BUILD_CONFIG) # Makefile
 
 full_render: $(FULL_RENDER)
+audio_test: $(AUDIO_TEST_FILE)
 
 .PHONY: all clean clobber distclean
 
@@ -110,6 +113,7 @@ clobber: clean logclean
 	rm -f $(TRACK_MAP_CACHED_FILES)
 	rm -f $(TRACK_MAP_CACHE_DIR)
 	rm -f $(FULL_RENDER)
+	rm -f $(AUDIO_TEST_FILE)
 	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
 
 logclean:
@@ -120,6 +124,7 @@ distclean: clean
 	rm -f $(HERO_JOIN_CONFIG) $(HERO_JOIN_FILE)
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
 	rm -f $(TRACK_MAP_CACHED_FILES)
+	rm -f $(AUDIO_TEST_FILE)
 
 
 DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = '' \#', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
@@ -130,32 +135,28 @@ $(BUILD_CONFIG):
 	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
 	cp Makefile Makefile.build
 
-# filter_audio_test = " \
-# [0:a] volume=$(shell $(READ_VOLUME_HERO)) [left]; \
-# [1:a] volume=$(shell $(READ_VOLUME_MAX)) [right]; \
-# [left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
-# "
-
-# audio_test: $(BUILD_PARAMS)
-# 	@echo "${BOLD}generate audio test file${NONE}"
-# 	HERO_FILE=$(firstword $(HERO_RAW_FILES)); \
-# 	MAX_FILE=$(firstword $(MAX_RAW_FILES)); \
-# 	$(FFMEG_BIN) \
-# 		-y \
-# 		-ss $(shell $(READ_ADVANCE_HERO)) \
-# 		-i $$HERO_FILE \
-# 		-ss $(shell $(READ_ADVANCE_MAX)) \
-# 		-i $$MAX_FILE \
-# 		-filter_complex $(filter_audio_test) \
-# 		-map "[a]" \
-# 		-q:a 4 \
-# 		$(shell $(READ_TIME_OPTIONS)) \
-# 		$@.aac
+$(AUDIO_TEST_FILE): $(HERO_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE) $(BUILD_CONFIG)
+	@echo "${BOLD}generate audio test file${NONE}"
+	$(FFMEG_BIN) \
+		-y \
+		-ss $(READ_ADVANCE_HERO) \
+		-i $(HERO_JOIN_FILE) \
+		-ss $(READ_ADVANCE_MAX) \
+		-i $(MAX_JOIN_FISHEYE_FILE) \
+		-filter_complex " \
+			[0:a] volume=$(READ_VOLUME_HERO) [left]; \
+			[1:a] volume=$(READ_VOLUME_MAX) [right]; \
+			[left][right]amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3[a] \
+		" \
+		-map "[a]" \
+		-q:a 4 \
+		$(READ_TIME_OPTIONS) \
+		$@
 
 #=======================================================================================================
 
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
-$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES) $(BUILD_CONFIG)
+$(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
 	FILE_LIST=`python -c "print('\n'.join(['file \'%s\'' % s for s in '$(HERO_RAW_FILES)'.split()]))"`; \
 	echo "$$FILE_LIST" > $@
@@ -166,7 +167,7 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > log_$@.txt 2>&1
 
 # generate waveform file
-$(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
+$(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}generate hero waveform progress video${NONE}"
 
 	$(eval MAXIMUM_JOIN_WIDTH:=$(call video_width, $(HERO_JOIN_FILE)))
@@ -208,7 +209,7 @@ $(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > log_$@.txt 2>&1
 
 # map max files to hemispherical
-$(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
+$(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}map max files to hemispherical${NONE}"
 	$(FFMEG_BIN) \
 		-y \
@@ -220,7 +221,7 @@ $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
 		$@ > log_$@.txt 2>&1
 
 # generate waveform file
-$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
+$(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
 	@echo "${BOLD}generate max waveform progress video${NONE}"
 
 	$(eval MAXIMUM_JOIN_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
@@ -264,7 +265,7 @@ $(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX) $(TRACK_MAP_CACHE_DIR)
 #=======================================================================================================
 
 # combine video into full map render
-$(FULL_RENDER): $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
+$(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VIDEO) $(MAX_JOIN_FILE) $(MAX_WAVEFORM_FILE) $(HERO_JOIN_FILE) $(HERO_WAVEFORM_FILE)
 	@echo "${BOLD}combine video, waveform and map renders into single view${NONE}"
 
 	@ #----------------------------------------------------------
