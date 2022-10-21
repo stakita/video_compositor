@@ -64,7 +64,8 @@ LOG_FILES = log_hero.join.mp4.txt \
 			log_max.waveform.mp4.txt \
 			log_merged_map_render.mp4.txt \
 			log_merged_render.mp4.txt \
-			log_track_map_render.mp4.txt
+			log_track_map_render.mp4.txt \
+			log_full_render.mp4.txt
 
 FFMEG_BIN = ffmpeg
 
@@ -104,7 +105,7 @@ BOLD=\033[1m
 UNDERLINE=\033[4m
 
 
-all: $(BUILD_CONFIG) merged_map
+all: $(BUILD_CONFIG) full_render
 
 # Comment "Makefile" out during development to be insensitive to changes in this file
 config: $(BUILD_CONFIG) # Makefile
@@ -114,6 +115,8 @@ merged: $(MERGED_RENDER)
 
 # Full merged map
 merged_map: $(MERGED_MAP_RENDER)
+
+full_render: $(FULL_RENDER)
 
 .PHONY: all clean clobber distclean
 
@@ -188,7 +191,7 @@ $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE)
-	@echo "${BOLD}generate waveform progress video${NONE}"
+	@echo "${BOLD}generate hero waveform progress video${NONE}"
 
 	$(eval MAXIMUM_JOIN_WIDTH:=$(call video_width, $(HERO_JOIN_FILE)))
 	$(eval MAXIMUM_SCALED_WIDTH:=$(call op_multiply, $(HERO_SCALING_FACTOR), $(MAXIMUM_JOIN_WIDTH)))
@@ -284,7 +287,7 @@ $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE)
 
 # generate waveform file
 $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE)
-	@echo "${BOLD}generate waveform progress video${NONE}"
+	@echo "${BOLD}generate max waveform progress video${NONE}"
 
 	$(eval MAXIMUM_JOIN_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
 	$(eval MAXIMUM_SCALED_WIDTH:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAXIMUM_JOIN_WIDTH)))
