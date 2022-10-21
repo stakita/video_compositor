@@ -8,7 +8,6 @@ HERO_RAW_FILES := $(wildcard hero5/*.MP4)
 HERO_JOIN_CONFIG = hero_join_config.txt
 HERO_JOIN_FILE = hero.join.mp4
 HERO_WAVEFORM_FILE = hero.waveform.mp4
-HERO_OUTPUT_BITRATE = 30000k
 HERO_SCALING_FACTOR = 0.75
 HERO_GENERATED_FILES = hero.join.wav hero.waveform.mp4.background.png
 
@@ -17,7 +16,6 @@ MAX_JOIN_CONFIG = max_join_config.txt
 MAX_JOIN_FISHEYE_FILE = max.join.fisheye.mp4
 MAX_JOIN_FILE = max.join.mp4
 MAX_WAVEFORM_FILE = max.waveform.mp4
-MAX_OUTPUT_BITRATE = 30000k
 MAX_SCALING_FACTOR = 1.0
 MAX_GENERATED_FILES = max.join.wav max.waveform.mp4.background.png
 
