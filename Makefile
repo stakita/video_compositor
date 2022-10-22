@@ -5,17 +5,17 @@ BUILD_CONFIG = config.py
 BUILD_MAKEFILE = Makefile.build
 
 HERO_RAW_FILES := $(wildcard hero5/*.MP4)
-HERO_JOIN_CONFIG = hero_join_config.txt
-HERO_JOIN_FILE = hero.join.mp4
-HERO_WAVEFORM_FILE = hero.waveform.mp4
+HERO_JOIN_CONFIG = $(TEMPFILE_CACHE_DIR)/hero_join_config.txt
+HERO_JOIN_FILE = $(TEMPFILE_CACHE_DIR)/hero.join.mp4
+HERO_WAVEFORM_FILE = $(TEMPFILE_CACHE_DIR)/hero.waveform.mp4
 HERO_SCALING_FACTOR = 0.75
 HERO_GENERATED_FILES = hero.join.wav hero.waveform.mp4.background.png
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
-MAX_JOIN_CONFIG = max_join_config.txt
-MAX_JOIN_FISHEYE_FILE = max.join.fisheye.mp4
-MAX_JOIN_FILE = max.join.mp4
-MAX_WAVEFORM_FILE = max.waveform.mp4
+MAX_JOIN_CONFIG = $(TEMPFILE_CACHE_DIR)/max_join_config.txt
+MAX_JOIN_FISHEYE_FILE = $(TEMPFILE_CACHE_DIR)/max.join.fisheye.mp4
+MAX_JOIN_FILE = $(TEMPFILE_CACHE_DIR)/max.join.mp4
+MAX_WAVEFORM_FILE = $(TEMPFILE_CACHE_DIR)/max.waveform.mp4
 MAX_SCALING_FACTOR = 1.0
 MAX_GENERATED_FILES = max.join.wav max.waveform.mp4.background.png
 
@@ -26,30 +26,31 @@ AUDIO_TEST_FILE = audio_test.aac
 
 WAVEFORM_VIDEO_TOOL = create_waveform_video
 
-TRACK_GPX = track_gps.gpx
+TRACK_GPX = $(TEMPFILE_CACHE_DIR)/track_gps.gpx
 GOPRO2GPX_TOOL = gopro2gpx
 
 TRACK_MAP_CACHE_DIR = tiles
+TEMPFILE_CACHE_DIR = compositor_build
 
 TRACK_MAP_OVERVIEW_VIDEO_TOOL=create_overview_video
-TRACK_MAP_OVERVIEW_VIDEO=map_overview.mp4
+TRACK_MAP_OVERVIEW_VIDEO=$(TEMPFILE_CACHE_DIR)/map_overview.mp4
 
 TRACK_MAP_CHASE_VIDEO_TOOL=create_chase_video
 TRACK_MAP_CHASE_ZOOM_FACTOR=16
-TRACK_MAP_CHASE_VIDEO=map_chase.mp4
+TRACK_MAP_CHASE_VIDEO=$(TEMPFILE_CACHE_DIR)/map_chase.mp4
 
 TRACK_MAP_GENERATED_FILES = track_gps.kpx track_gps.bin map_overview.mp4.background.png
 TRACK_MAP_CACHED_FILES = $(wildcard $(TRACK_MAP_CACHE_DIR)/*.png)
 
-LOG_FILES = log_hero.join.mp4.txt \
-			log_map_overview.mp4.txt \
-			log_max.join.mp4.txt \
-			log_track_gps.gpx.txt \
-			log_hero.waveform.mp4.txt \
-			log_map_chase.mp4.txt \
-			log_max.join.fisheye.mp4.txt \
-			log_max.waveform.mp4.txt \
-			log_full_render.mp4.txt
+LOG_FILES = hero.join.mp4.log \
+			map_overview.mp4.log \
+			max.join.mp4.log \
+			track_gps.gpx.log \
+			hero.waveform.mp4.log \
+			map_chase.mp4.log \
+			max.join.fisheye.mp4.log \
+			max.waveform.mp4.log \
+			full_render.mp4.log
 
 FFMEG_BIN = ffmpeg
 
@@ -155,6 +156,13 @@ $(AUDIO_TEST_FILE): $(BUILD_CONFIG)
 
 #=======================================================================================================
 
+# Todo: FIX - This does not have per process isolation or most other safety measures
+$(TEMPFILE_CACHE_DIR):
+	@# Create link to a tile cache directory
+	mkdir -p /tmp/compositor_build && ln -s /tmp/compositor_build
+
+#=======================================================================================================
+
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
 $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
@@ -162,9 +170,9 @@ $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	echo "$$FILE_LIST" > $@
 
 # join hero files
-$(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
+$(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG) $(TEMPFILE_CACHE_DIR)
 	@echo "${BOLD}concat hero files${NONE}"
-	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > log_$@.txt 2>&1
+	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > $@.log 2>&1
 
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
@@ -187,7 +195,7 @@ $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 		--output=$(HERO_WAVEFORM_FILE) \
 		--width=$(MAXIMUM_SCALED_WIDTH) \
 		--height=100 \
-		--channels=1 > log_$@.txt 2>&1
+		--channels=1 > $@.log 2>&1
 
 #=======================================================================================================
 
@@ -204,9 +212,9 @@ $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG)
 #    0:3 - the "GoPro MET" temmetry channel including GPS data
 # NOTE: The reference to the telemetry is hard coded current, but we can query this with ffprobe if necessary
 #       to make it dynamic
-$(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
+$(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG) $(TEMPFILE_CACHE_DIR)
 	@echo "${BOLD}concat max files${NONE}"
-	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > log_$@.txt 2>&1
+	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > $@.log 2>&1
 
 # map max files to hemispherical
 $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE) $(BUILD_CONFIG)
@@ -218,7 +226,7 @@ $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE) $(BUILD_CONFIG)
 		-b:v 2500k \
 		-c:a copy \
 		$(READ_TIME_OPTIONS) \
-		$@ > log_$@.txt 2>&1
+		$@ > $@.log 2>&1
 
 # generate waveform file
 $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
@@ -241,14 +249,14 @@ $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
 		--output=$(MAX_WAVEFORM_FILE) \
 		--width=$(MAXIMUM_SCALED_WIDTH) \
 		--height=100 \
-		--channels=1 > log_$@.txt 2>&1
+		--channels=1 > $@.log 2>&1
 
 #=======================================================================================================
 
 $(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
 	@echo "${BOLD}extract GPX data from video${NONE}"
 	@# This tool adds the gpx (and kpx) extensions automatically, so we "basename" off the extension
-	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@) > log_$@.txt 2>&1
+	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@) > $@.log 2>&1
 
 $(TRACK_MAP_CACHE_DIR):
 	@# Create link to a tile cache directory
@@ -256,11 +264,11 @@ $(TRACK_MAP_CACHE_DIR):
 
 $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX) $(TRACK_MAP_CACHE_DIR)
 	@echo "${BOLD}generate track map overview video${NONE}"
-	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles > log_$@.txt 2>&1
+	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles > $@.log 2>&1
 
 $(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX) $(TRACK_MAP_CACHE_DIR)
 	@echo "${BOLD}generate track map chase video${NONE}"
-	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@ > log_$@.txt 2>&1
+	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@ > $@.log 2>&1
 
 #=======================================================================================================
 
@@ -329,4 +337,4 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 		-b:v $(FULL_RENDER_OUTPUT_BITRATE) \
 		$(READ_TIME_OPTIONS) \
 		-r 23.98 \
-		$@ > log_$@.txt 2>&1
+		$@ > $@.log 2>&1
