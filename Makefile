@@ -135,14 +135,14 @@ $(BUILD_CONFIG):
 	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
 	cp Makefile Makefile.build
 
-$(AUDIO_TEST_FILE): $(HERO_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE) $(BUILD_CONFIG)
+$(AUDIO_TEST_FILE): $(BUILD_CONFIG)
 	@echo "${BOLD}generate audio test file${NONE}"
 	$(FFMEG_BIN) \
 		-y \
 		-ss $(READ_ADVANCE_HERO) \
-		-i $(HERO_JOIN_FILE) \
+		-i $(firstword $(HERO_RAW_FILES)) \
 		-ss $(READ_ADVANCE_MAX) \
-		-i $(MAX_JOIN_FISHEYE_FILE) \
+		-i $(firstword $(MAX_RAW_FILES)) \
 		-filter_complex " \
 			[0:a] volume=$(READ_VOLUME_HERO) [left]; \
 			[1:a] volume=$(READ_VOLUME_MAX) [right]; \
