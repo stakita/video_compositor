@@ -5,14 +5,14 @@ BUILD_CONFIG = config.py
 BUILD_MAKEFILE = Makefile.build
 
 HERO_RAW_FILES := $(wildcard hero5/*.MP4)
-HERO_JOIN_CONFIG = $(TEMPFILE_CACHE_DIR)/hero_join_config.txt
+HERO_JOIN_CONFIG = hero_join_config.txt
 HERO_JOIN_FILE = $(TEMPFILE_CACHE_DIR)/hero.join.mp4
 HERO_WAVEFORM_FILE = $(TEMPFILE_CACHE_DIR)/hero.waveform.mp4
 HERO_SCALING_FACTOR = 0.75
 HERO_GENERATED_FILES = hero.join.wav hero.waveform.mp4.background.png
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
-MAX_JOIN_CONFIG = $(TEMPFILE_CACHE_DIR)/max_join_config.txt
+MAX_JOIN_CONFIG = max_join_config.txt
 MAX_JOIN_FISHEYE_FILE = $(TEMPFILE_CACHE_DIR)/max.join.fisheye.mp4
 MAX_JOIN_FILE = $(TEMPFILE_CACHE_DIR)/max.join.mp4
 MAX_WAVEFORM_FILE = $(TEMPFILE_CACHE_DIR)/max.waveform.mp4
@@ -314,11 +314,17 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 
 	$(FFMEG_BIN) \
 		-y \
+		-ss $(READ_ADVANCE_HERO) \
 		-i $(HERO_JOIN_FILE) \
+		-ss $(READ_ADVANCE_HERO) \
 		-i $(HERO_WAVEFORM_FILE) \
+		-ss $(READ_ADVANCE_MAX) \
 		-i $(MAX_JOIN_FILE) \
+		-ss $(READ_ADVANCE_MAX) \
 		-i $(MAX_WAVEFORM_FILE) \
+		-ss $(READ_ADVANCE_MAX) \
 		-i $(TRACK_MAP_OVERVIEW_VIDEO) \
+		-ss $(READ_ADVANCE_MAX) \
 		-i $(TRACK_MAP_CHASE_VIDEO) \
 		-filter_complex " \
 			[0:v] setpts=PTS-STARTPTS,scale=$(HERO_GEOMETRY) [vsized0]; \
