@@ -41,6 +41,8 @@ TRACK_MAP_CHASE_VIDEO_TOOL=create_chase_video
 TRACK_MAP_CHASE_ZOOM_FACTOR=16
 TRACK_MAP_CHASE_VIDEO=$(TEMPFILE_CACHE_DIR)/map_chase.mp4
 
+TRACK_MAP_FRAMES_PER_SECOND = 5
+
 TRACK_MAP_GENERATED_FILES = $(TEMPFILE_CACHE_DIR)/track_gps.kpx \
 							$(TEMPFILE_CACHE_DIR)/track_gps.bin \
 							$(TEMPFILE_CACHE_DIR)/map_overview.mp4.background.png
@@ -163,7 +165,8 @@ $(AUDIO_TEST_FILE): $(BUILD_CONFIG)
 
 # Todo: FIX - This does not have per process isolation or most other safety measures
 $(TEMPFILE_CACHE_DIR):
-	@# Create link to a tile cache directory
+	@# Create link to local temp cache directory
+	@echo "${BOLD}create link to local temp cache directory${NONE}"
 	mkdir -p /tmp/compositor_build && ln -s /tmp/compositor_build
 
 #=======================================================================================================
@@ -223,7 +226,7 @@ $(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG) $(TEMPFILE_CACHE_DIR)
 
 # map max files to hemispherical
 $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE) $(BUILD_CONFIG)
-	@echo "${BOLD}map max files to hemispherical${NONE}"
+	@echo "${BOLD}map max joined (fisheye) to hemispherical${NONE}"
 	$(FFMEG_BIN) \
 		-y \
 		-i $< \
@@ -269,11 +272,11 @@ $(TRACK_MAP_CACHE_DIR):
 
 $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX) $(TRACK_MAP_CACHE_DIR)
 	@echo "${BOLD}generate track map overview video${NONE}"
-	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles > $@.log 2>&1
+	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles --fps=$(TRACK_MAP_FRAMES_PER_SECOND) > $@.log 2>&1
 
 $(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX) $(TRACK_MAP_CACHE_DIR)
 	@echo "${BOLD}generate track map chase video${NONE}"
-	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@ > $@.log 2>&1
+	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@ --fps=$(TRACK_MAP_FRAMES_PER_SECOND) > $@.log 2>&1
 
 #=======================================================================================================
 
