@@ -9,7 +9,8 @@ HERO_JOIN_CONFIG = hero_join_config.txt
 HERO_JOIN_FILE = $(TEMPFILE_CACHE_DIR)/hero.join.mp4
 HERO_WAVEFORM_FILE = $(TEMPFILE_CACHE_DIR)/hero.waveform.mp4
 HERO_SCALING_FACTOR = 0.75
-HERO_GENERATED_FILES = hero.join.wav hero.waveform.mp4.background.png
+HERO_GENERATED_FILES = $(TEMPFILE_CACHE_DIR)/hero.join.wav \
+						$(TEMPFILE_CACHE_DIR)/hero.waveform.mp4.background.png
 
 MAX_RAW_FILES := $(wildcard max/*.LRV)
 MAX_JOIN_CONFIG = max_join_config.txt
@@ -17,7 +18,8 @@ MAX_JOIN_FISHEYE_FILE = $(TEMPFILE_CACHE_DIR)/max.join.fisheye.mp4
 MAX_JOIN_FILE = $(TEMPFILE_CACHE_DIR)/max.join.mp4
 MAX_WAVEFORM_FILE = $(TEMPFILE_CACHE_DIR)/max.waveform.mp4
 MAX_SCALING_FACTOR = 1.0
-MAX_GENERATED_FILES = max.join.wav max.waveform.mp4.background.png
+MAX_GENERATED_FILES = $(TEMPFILE_CACHE_DIR)/max.join.wav \
+						$(TEMPFILE_CACHE_DIR)/max.waveform.mp4.background.png
 
 FULL_RENDER_OUTPUT_BITRATE = 40000k
 FULL_RENDER = full_render.mp4
@@ -39,17 +41,20 @@ TRACK_MAP_CHASE_VIDEO_TOOL=create_chase_video
 TRACK_MAP_CHASE_ZOOM_FACTOR=16
 TRACK_MAP_CHASE_VIDEO=$(TEMPFILE_CACHE_DIR)/map_chase.mp4
 
-TRACK_MAP_GENERATED_FILES = track_gps.kpx track_gps.bin map_overview.mp4.background.png
+TRACK_MAP_GENERATED_FILES = $(TEMPFILE_CACHE_DIR)/track_gps.kpx \
+							$(TEMPFILE_CACHE_DIR)/track_gps.bin \
+							$(TEMPFILE_CACHE_DIR)/map_overview.mp4.background.png
+
 TRACK_MAP_CACHED_FILES = $(wildcard $(TRACK_MAP_CACHE_DIR)/*.png)
 
-LOG_FILES = hero.join.mp4.log \
-			map_overview.mp4.log \
-			max.join.mp4.log \
-			track_gps.gpx.log \
-			hero.waveform.mp4.log \
-			map_chase.mp4.log \
-			max.join.fisheye.mp4.log \
-			max.waveform.mp4.log \
+LOG_FILES = $(TEMPFILE_CACHE_DIR)/hero.join.mp4.log \
+			$(TEMPFILE_CACHE_DIR)/map_overview.mp4.log \
+			$(TEMPFILE_CACHE_DIR)/max.join.mp4.log \
+			$(TEMPFILE_CACHE_DIR)/track_gps.gpx.log \
+			$(TEMPFILE_CACHE_DIR)/hero.waveform.mp4.log \
+			$(TEMPFILE_CACHE_DIR)/map_chase.mp4.log \
+			$(TEMPFILE_CACHE_DIR)/max.join.fisheye.mp4.log \
+			$(TEMPFILE_CACHE_DIR)/max.waveform.mp4.log \
 			full_render.mp4.log
 
 FFMEG_BIN = ffmpeg
