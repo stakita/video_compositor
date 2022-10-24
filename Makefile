@@ -41,6 +41,8 @@ TRACK_MAP_CHASE_VIDEO_TOOL=create_chase_video
 TRACK_MAP_CHASE_ZOOM_FACTOR=16
 TRACK_MAP_CHASE_VIDEO=$(TEMPFILE_CACHE_DIR)/map_chase.mp4
 
+TRACK_MAP_FRAMES_PER_SECOND = 5
+
 TRACK_MAP_GENERATED_FILES = $(TEMPFILE_CACHE_DIR)/track_gps.kpx \
 							$(TEMPFILE_CACHE_DIR)/track_gps.bin \
 							$(TEMPFILE_CACHE_DIR)/map_overview.mp4.background.png
@@ -269,11 +271,11 @@ $(TRACK_MAP_CACHE_DIR):
 
 $(TRACK_MAP_OVERVIEW_VIDEO): $(TRACK_GPX) $(TRACK_MAP_CACHE_DIR)
 	@echo "${BOLD}generate track map overview video${NONE}"
-	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles > $@.log 2>&1
+	$(TRACK_MAP_OVERVIEW_VIDEO_TOOL) $< --output=$@ --tile-cache=tiles --fps=$(TRACK_MAP_FRAMES_PER_SECOND) > $@.log 2>&1
 
 $(TRACK_MAP_CHASE_VIDEO): $(TRACK_GPX) $(TRACK_MAP_CACHE_DIR)
 	@echo "${BOLD}generate track map chase video${NONE}"
-	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@ > $@.log 2>&1
+	$(TRACK_MAP_CHASE_VIDEO_TOOL) $< $(TRACK_MAP_CHASE_ZOOM_FACTOR) --output=$@ --fps=$(TRACK_MAP_FRAMES_PER_SECOND) > $@.log 2>&1
 
 #=======================================================================================================
 
