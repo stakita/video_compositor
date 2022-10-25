@@ -42,6 +42,7 @@ TRACK_MAP_CHASE_ZOOM_FACTOR=16
 TRACK_MAP_CHASE_VIDEO=$(TEMPFILE_CACHE_DIR)/map_chase.mp4
 
 TRACK_MAP_FRAMES_PER_SECOND = 5
+WAVEFORM_VIDEO_FRAMES_PER_SECOND = 5
 
 TRACK_MAP_GENERATED_FILES = $(TEMPFILE_CACHE_DIR)/track_gps.kpx \
 							$(TEMPFILE_CACHE_DIR)/track_gps.bin \
@@ -201,6 +202,7 @@ $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
 		--output=$(HERO_WAVEFORM_FILE) \
 		--width=$(MAXIMUM_SCALED_WIDTH) \
 		--height=100 \
+		--fps=$(WAVEFORM_VIDEO_FRAMES_PER_SECOND) \
 		--channels=1 > $@.log 2>&1
 
 #=======================================================================================================
@@ -255,6 +257,7 @@ $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
 		--output=$(MAX_WAVEFORM_FILE) \
 		--width=$(MAXIMUM_SCALED_WIDTH) \
 		--height=100 \
+		--fps=$(WAVEFORM_VIDEO_FRAMES_PER_SECOND) \
 		--channels=1 > $@.log 2>&1
 
 #=======================================================================================================
