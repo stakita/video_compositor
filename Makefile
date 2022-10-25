@@ -317,6 +317,23 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 
 	@ #----------------------------------------------------------
 
+	@# Timing calcs
+	$(eval HERO_DURATION_SECONDS:=$(call duration_seconds, $(HERO_JOIN_FILE)))
+	$(eval HERO_DURATION_TRIMMED:=$(call op_subract, $(HERO_DURATION_SECONDS), $(READ_ADVANCE_HERO_SECONDS)))
+	$(eval MAX_DURATION_SECONDS:=$(call duration_seconds, $(MAX_JOIN_FILE)))
+	$(eval MAX_DURATION_TRIMMED:=$(call op_subract, $(MAX_DURATION_SECONDS), $(READ_ADVANCE_MAX_SECONDS)))
+
+	$(eval TOTAL_RENDER_DURATION:=$(call op_max, $(HERO_DURATION_TRIMMED), $(MAX_DURATION_TRIMMED)))
+	$(eval TOTAL_RENDER_DURATION_ARG:=-t $(TOTAL_RENDER_DURATION))
+
+	$(eval TIME_ARGUMENT:=$(call op_string_or, $(READ_TIME_OPTIONS), $(TOTAL_RENDER_DURATION_ARG)))
+
+	@echo 5: $(HERO_DURATION_TRIMMED)
+	@echo 6: $(MAX_DURATION_TRIMMED)
+	@echo 7: $(TOTAL_RENDER_DURATION)
+	@echo 8: $(TOTAL_RENDER_DURATION_ARG)
+	@echo 9: $(TIME_ARGUMENT)
+
 	$(FFMEG_BIN) \
 		-y \
 		-ss $(READ_ADVANCE_HERO) \
@@ -346,6 +363,6 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 			" \
 		-map "[out]" \
 		-b:v $(FULL_RENDER_OUTPUT_BITRATE) \
-		$(READ_TIME_OPTIONS) \
+		$(TIME_ARGUMENT) \
 		-r 23.98 \
 		$@ > $@.log 2>&1
