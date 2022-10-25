@@ -82,9 +82,11 @@ duration_seconds = $(shell ffprobe -v error -show_entries format=duration -of de
 op_multiply = $(shell python -c "print(int($(1) * $(2)))")
 op_subract = $(shell python -c "print(int($(1) - $(2)))")
 op_add = $(shell python -c "print(int($(1) + $(2)))")
-# Todo: Fix this horrible work around
+# Todo: Fix this work around
 op_add_4 = $(shell python -c "print(int($(1) + $(2) + $(3) + $(4)))")
 op_max = $(shell python -c "print(max($(1), $(2)))")
+# op_string_or: if first parameter is populated, use it, otherwise use the second parameter
+op_string_or = $(shell python -c "print('$(1)' if '$(1)' != '' else '$(2)')")
 
 NONE=\033[00m
 RED=\033[01;31m
@@ -315,6 +317,23 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 
 	@ #----------------------------------------------------------
 
+	@# Timing calcs
+	$(eval HERO_DURATION_SECONDS:=$(call duration_seconds, $(HERO_JOIN_FILE)))
+	$(eval HERO_DURATION_TRIMMED:=$(call op_subract, $(HERO_DURATION_SECONDS), $(READ_ADVANCE_HERO_SECONDS)))
+	$(eval MAX_DURATION_SECONDS:=$(call duration_seconds, $(MAX_JOIN_FILE)))
+	$(eval MAX_DURATION_TRIMMED:=$(call op_subract, $(MAX_DURATION_SECONDS), $(READ_ADVANCE_MAX_SECONDS)))
+
+	$(eval TOTAL_RENDER_DURATION:=$(call op_max, $(HERO_DURATION_TRIMMED), $(MAX_DURATION_TRIMMED)))
+	$(eval TOTAL_RENDER_DURATION_ARG:=-t $(TOTAL_RENDER_DURATION))
+
+	$(eval TIME_ARGUMENT:=$(call op_string_or, $(READ_TIME_OPTIONS), $(TOTAL_RENDER_DURATION_ARG)))
+
+	@echo 5: $(HERO_DURATION_TRIMMED)
+	@echo 6: $(MAX_DURATION_TRIMMED)
+	@echo 7: $(TOTAL_RENDER_DURATION)
+	@echo 8: $(TOTAL_RENDER_DURATION_ARG)
+	@echo 9: $(TIME_ARGUMENT)
+
 	$(FFMEG_BIN) \
 		-y \
 		-ss $(READ_ADVANCE_HERO) \
@@ -344,6 +363,6 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 			" \
 		-map "[out]" \
 		-b:v $(FULL_RENDER_OUTPUT_BITRATE) \
-		$(READ_TIME_OPTIONS) \
+		$(TIME_ARGUMENT) \
 		-r 23.98 \
 		$@ > $@.log 2>&1
