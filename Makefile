@@ -122,6 +122,7 @@ clobber: clean logclean
 	rm -f $(MAX_JOIN_CONFIG) $(MAX_JOIN_FILE) $(MAX_JOIN_FISHEYE_FILE)
 	rm -f $(TRACK_MAP_CACHED_FILES)
 	rm -f $(TRACK_MAP_CACHE_DIR)
+	rm -f $(TEMPFILE_CACHE_DIR)
 	rm -f $(FULL_RENDER)
 	rm -f $(AUDIO_TEST_FILE)
 	rm -f $(BUILD_CONFIG) $(BUILD_MAKEFILE)
@@ -140,13 +141,13 @@ distclean: clean
 DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\nADVANCE_HERO_SECONDS = 0.000\nVOLUME_HERO = 1.0\nVOLUME_MAX = 0.15\nHERO_AUDIO_OPTS = '' \#', compand=attacks=0:decays=0.4:points=-30/-900|-20/-20|0/0|20/20'"
 
 $(BUILD_CONFIG):
-	@echo "${BOLD}generate build config file${NONE}"
-	@echo $(DEFAULT_CONFIG) > $@
-	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
-	cp Makefile Makefile.build
 	@# Todo: FIX - This does not have per process isolation or most other safety measures
 	@echo "${BOLD}create link to local temp cache directory${NONE}"
-	mkdir -p /tmp/compositor_build && ln -s /tmp/compositor_build
+	$(shell ls compositor_build || mkdir -p /tmp/compositor_build && ln -s /tmp/compositor_build)
+	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
+	cp Makefile Makefile.build
+	@echo "${BOLD}generate build config file${NONE}"
+	@echo $(DEFAULT_CONFIG) > $@
 
 $(AUDIO_TEST_FILE): $(BUILD_CONFIG)
 	@echo "${BOLD}generate audio test file${NONE}"
