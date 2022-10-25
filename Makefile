@@ -142,6 +142,9 @@ $(BUILD_CONFIG):
 	@echo $(DEFAULT_CONFIG) > $@
 	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
 	cp Makefile Makefile.build
+	@# Todo: FIX - This does not have per process isolation or most other safety measures
+	@echo "${BOLD}create link to local temp cache directory${NONE}"
+	mkdir -p /tmp/compositor_build && ln -s /tmp/compositor_build
 
 $(AUDIO_TEST_FILE): $(BUILD_CONFIG)
 	@echo "${BOLD}generate audio test file${NONE}"
@@ -163,14 +166,6 @@ $(AUDIO_TEST_FILE): $(BUILD_CONFIG)
 
 #=======================================================================================================
 
-# Todo: FIX - This does not have per process isolation or most other safety measures
-$(TEMPFILE_CACHE_DIR):
-	@# Create link to local temp cache directory
-	@echo "${BOLD}create link to local temp cache directory${NONE}"
-	mkdir -p /tmp/compositor_build && ln -s /tmp/compositor_build
-
-#=======================================================================================================
-
 # generate ffmpeg join config for hero files - needed by ffmpeg concat method
 $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	@echo "${BOLD}generate hero ffmpeg join config file${NONE}"
@@ -178,7 +173,7 @@ $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	echo "$$FILE_LIST" > $@
 
 # join hero files
-$(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG) $(TEMPFILE_CACHE_DIR)
+$(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > $@.log 2>&1
 
@@ -220,7 +215,7 @@ $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG)
 #    0:3 - the "GoPro MET" temmetry channel including GPS data
 # NOTE: The reference to the telemetry is hard coded current, but we can query this with ffprobe if necessary
 #       to make it dynamic
-$(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG) $(TEMPFILE_CACHE_DIR)
+$(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
 	@echo "${BOLD}concat max files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > $@.log 2>&1
 
