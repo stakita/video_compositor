@@ -82,9 +82,11 @@ duration_seconds = $(shell ffprobe -v error -show_entries format=duration -of de
 op_multiply = $(shell python -c "print(int($(1) * $(2)))")
 op_subract = $(shell python -c "print(int($(1) - $(2)))")
 op_add = $(shell python -c "print(int($(1) + $(2)))")
-# Todo: Fix this horrible work around
+# Todo: Fix this work around
 op_add_4 = $(shell python -c "print(int($(1) + $(2) + $(3) + $(4)))")
 op_max = $(shell python -c "print(max($(1), $(2)))")
+# op_string_or: if first parameter is populated, use it, otherwise use the second parameter
+op_string_or = $(shell python -c "print('$(1)' if '$(1)' != '' else '$(2)')")
 
 NONE=\033[00m
 RED=\033[01;31m
