@@ -45,6 +45,7 @@ TRACK_MAP_FRAMES_PER_SECOND = 5
 WAVEFORM_VIDEO_FRAMES_PER_SECOND = 5
 
 TRACK_MAP_GENERATED_FILES = $(TEMPFILE_CACHE_DIR)/track_gps.kpx \
+							$(TEMPFILE_CACHE_DIR)/track_gps.kml \
 							$(TEMPFILE_CACHE_DIR)/track_gps.bin \
 							$(TEMPFILE_CACHE_DIR)/map_overview.mp4.background.png
 
