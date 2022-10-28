@@ -180,7 +180,7 @@ $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 # join hero files
 $(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
 	@echo "${BOLD}concat hero files${NONE}"
-	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > $@.log 2>&1
+	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map 0:a -map 0:3 $@ > $@.log 2>&1
 
 # generate waveform file
 $(HERO_WAVEFORM_FILE): $(HERO_JOIN_FILE) $(BUILD_CONFIG)
@@ -223,7 +223,7 @@ $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG)
 #       to make it dynamic
 $(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
 	@echo "${BOLD}concat max files${NONE}"
-	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map: 0:a -map: 0:3 $@ > $@.log 2>&1
+	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map 0:a -map 0:3 $@ > $@.log 2>&1
 
 # map max files to hemispherical
 $(MAX_JOIN_FILE): $(MAX_JOIN_FISHEYE_FILE) $(BUILD_CONFIG)
