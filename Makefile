@@ -263,10 +263,10 @@ $(MAX_WAVEFORM_FILE): $(MAX_JOIN_FILE) $(BUILD_CONFIG)
 
 #=======================================================================================================
 
-$(TRACK_GPX): $(MAX_JOIN_FISHEYE_FILE)
-	@echo "${BOLD}extract GPX data from video${NONE}"
+$(TRACK_GPX): $(MAX_RAW_FILES)
+	@echo "${BOLD}extract GPX data from videos${NONE}"
 	@# This tool adds the gpx (and kpx) extensions automatically, so we "basename" off the extension
-	$(GOPRO2GPX_TOOL) -s -vv $< $(basename $@) > $@.log 2>&1
+	$(GOPRO2GPX_TOOL) -s -vv $? $(basename $@) > $@.log 2>&1
 
 $(TRACK_MAP_CACHE_DIR):
 	@# Create link to a tile cache directory
