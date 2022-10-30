@@ -364,7 +364,9 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 			[leftstack][rightstack] hstack [out]; \
 			[0:a] apad [0a_pad]; \
 			[2:a] apad [1a_pad]; \
-			[0a_pad][1a_pad] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
+			[0a_pad] volume=$(READ_VOLUME_HERO) [left]; \
+			[1a_pad] volume=$(READ_VOLUME_MAX) [right]; \
+			[left][right] amerge=inputs=2,pan=stereo|c0<c0+c1|c1<c2+c3 \
 			" \
 		-map "[out]" \
 		-b:v $(FULL_RENDER_OUTPUT_BITRATE) \
