@@ -178,7 +178,7 @@ $(HERO_JOIN_CONFIG): $(HERO_RAW_FILES)
 	echo "$$FILE_LIST" > $@
 
 # join hero files
-$(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG)
+$(HERO_JOIN_FILE): $(HERO_JOIN_CONFIG) $(HERO_RAW_FILES)
 	@echo "${BOLD}concat hero files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map 0:a -map 0:3 $@ > $@.log 2>&1
 
@@ -221,7 +221,7 @@ $(MAX_JOIN_CONFIG): $(MAX_RAW_FILES) $(BUILD_CONFIG)
 #    0:3 - the "GoPro MET" temmetry channel including GPS data
 # NOTE: The reference to the telemetry is hard coded current, but we can query this with ffprobe if necessary
 #       to make it dynamic
-$(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG)
+$(MAX_JOIN_FISHEYE_FILE): $(MAX_JOIN_CONFIG) $(MAX_RAW_FILES)
 	@echo "${BOLD}concat max files${NONE}"
 	$(FFMEG_BIN) -y -f concat -safe 0 -i $< -c copy -map 0:v -map 0:a -map 0:3 $@ > $@.log 2>&1
 
@@ -310,15 +310,6 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 	$(eval MAX_WAVEFORM_WIDTH:=$(call video_width, $(MAX_WAVEFORM_FILE)))
 
 	@echo 2: $(MAX_GEOMETRY)
-
-	@ #----------------------------------------------------------
-
-	@# Todo: fix these - hard coded currently
-	$(eval RENDER_WIDTH := $(HERO_WIDTH_SCALED))
-	$(eval RENDER_HEIGHT := $(call op_add_4, $(HERO_HEIGHT_SCALED), $(HERO_WAVEFORM_HEIGHT), $(MAX_HEIGHT_SCALED), $(MAX_WAVEFORM_HEIGHT)))
-
-	@echo 3: $(RENDER_WIDTH)
-	@echo 4: $(RENDER_HEIGHT)
 
 	@ #----------------------------------------------------------
 
