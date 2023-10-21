@@ -145,7 +145,7 @@ DEFAULT_CONFIG = "TIME_OPTIONS = '-t 00:05:00.000'\nADVANCE_MAX_SECONDS = 0.000\
 $(BUILD_CONFIG):
 	@# Todo: FIX - This does not have per process isolation or most other safety measures
 	@echo "${BOLD}create link to local temp cache directory${NONE}"
-	$(shell ls compositor_build || mkdir -p /tmp/compositor_build && ln -s /tmp/compositor_build)
+	@$(shell ls compositor_build 2>/dev/null || mkdir -p /tmp/compositor_build && ln -s /tmp/compositor_build)
 	@echo "${BOLD}Snapshot the makefile used for the build${NONE}"
 	cp Makefile Makefile.build
 	@echo "${BOLD}generate build config file${NONE}"
