@@ -304,7 +304,9 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 	$(eval MAX_HEIGHT_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAX_HEIGHT)))
 	$(eval MAX_WIDTH:=$(call video_width, $(MAX_JOIN_FILE)))
 	$(eval MAX_WIDTH_SCALED:=$(call op_multiply, $(MAX_SCALING_FACTOR), $(MAX_WIDTH)))
-	$(eval MAX_GEOMETRY="$(MAX_WIDTH_SCALED)"x"$(MAX_HEIGHT_SCALED)")
+	@ # $(eval MAX_GEOMETRY="$(MAX_WIDTH_SCALED)"x"$(MAX_HEIGHT_SCALED)")
+	@ # Override MAX_GEOMETRY as original is not the expected size
+	$(eval MAX_GEOMETRY="1244x704")
 
 	$(eval MAX_WAVEFORM_HEIGHT:=$(call video_height, $(MAX_WAVEFORM_FILE)))
 	$(eval MAX_WAVEFORM_WIDTH:=$(call video_width, $(MAX_WAVEFORM_FILE)))
@@ -347,7 +349,8 @@ $(FULL_RENDER): $(BUILD_CONFIG) $(TRACK_MAP_CHASE_VIDEO) $(TRACK_MAP_OVERVIEW_VI
 		-filter_complex " \
 			[0:v] setpts=PTS-STARTPTS,scale=$(HERO_GEOMETRY) [vsized0]; \
 			[2:v] setpts=PTS-STARTPTS,scale=$(MAX_GEOMETRY) [vsized2]; \
-			[vsized2][3:v] vstack [vmaxstack]; \
+			[3:v] setpts=PTS-STARTPTS,scale="1244x100" [vsized3]; \
+			[vsized2][vsized3] vstack [vmaxstack]; \
 			[vmaxstack] pad=width=$(HERO_WIDTH_SCALED):x=(ow-iw):color=black [vmaxstackpad]; \
 			[vsized0][1:v] vstack [vherostack]; \
 			[vherostack][vmaxstackpad] vstack [leftstack]; \
